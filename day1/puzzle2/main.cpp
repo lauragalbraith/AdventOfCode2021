@@ -11,10 +11,19 @@
 using namespace std;
 
 const string kInputFileName = "../input.txt";
+const int kWindowSize = 3;
 
 // O(TODO once done) where n is the length of input
 int BruteForce(const vector<int> input) {
-  // TODO
+  if (input.size() <= kWindowSize) {
+    return 0;
+  }
+
+  int increases = 0;
+  for (int prev = 0, curr = 1; curr < input.size() - kWindowSize + 1; ++prev, ++curr) {
+    cout << input[prev] << " " << input[curr] << endl;
+  }
+  return increases;
 }
 
 int main() {
