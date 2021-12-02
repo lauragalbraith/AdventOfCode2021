@@ -100,7 +100,6 @@ tuple<int, int, int> CalculateNewHDAimPosition(tuple<int, int, int> curr_pos_aim
   int d = get<1>(curr_pos_aim);
   int aim = get<2>(curr_pos_aim);
 
-  tuple<int, int, int> new_pos_aim(h, d, aim);
   tuple<int, int, int> error(-1, -1, -1);
   regex forward("^forward (\\d+)$"), down("^down (\\d+)$"), up("^up (\\d+)$"); // TODO move to global
 
@@ -109,7 +108,11 @@ tuple<int, int, int> CalculateNewHDAimPosition(tuple<int, int, int> curr_pos_aim
     if (h_diff == -1) {
       return error;
     }
-    tuple<int, int, int> new_pos_aim(h + h_diff, d, aim);
+
+    // forward X does two things:
+    //  It increases your horizontal position by X units.
+    //  It increases your depth by your aim multiplied by X.
+    tuple<int, int, int> new_pos_aim(h + h_diff, d + (aim*h_diff), aim);
     return new_pos_aim;
   }
   else if (regex_match(step, down)) {
@@ -117,21 +120,25 @@ tuple<int, int, int> CalculateNewHDAimPosition(tuple<int, int, int> curr_pos_aim
     if (d_diff == -1) {
       return error;
     }
-    // new_pos.second = d + d_diff; // TODO change
+
+    // down X increases your aim by X units
+    tuple<int, int, int> new_pos_aim(h, d, aim + d_diff);
+    return new_pos_aim;
   }
   else if (regex_match(step, up)) {
     int d_diff = ExtractIntFromStringUsingRegex(up, step);
     if (d_diff == -1) {
       return error;
     }
-    // new_pos.second = d - d_diff; // TODO change
+
+    // up X decreases your aim by X units
+    tuple<int, int, int> new_pos_aim(h, d, aim - d_diff);
+    return new_pos_aim;
   }
   else {
     cout << "Step did not match any recognized directions" << endl;
     return error;
   }
-
-  return new_pos_aim;
 }
 
 int main() {
