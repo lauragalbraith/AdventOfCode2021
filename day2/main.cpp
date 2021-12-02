@@ -14,6 +14,37 @@
 
 using namespace std;
 
+class PositionAim {
+  private:
+    int horizontal_position;
+    int depth_position;
+    int aim;
+  public:
+    bool success;
+    PositionAim(int h, int d, int a);
+    PositionAim(bool s);
+    int get_horizontal_position() {return horizontal_position;}
+    int get_depth_position() {return depth_position;}
+    int get_aim() {return aim;}
+    int calculate_multiple_position() {return horizontal_position*depth_position;}
+};
+
+PositionAim::PositionAim(bool s) {
+  horizontal_position = -1;
+  depth_position = -1;
+  aim = -1;
+  success = s;
+}
+
+PositionAim::PositionAim(int h, int d, int a) {
+  horizontal_position = h;
+  depth_position = d;
+  aim = a;
+  success = true;
+}
+
+const regex forward_rgx("^forward (\\d+)$"), down_rgx("^down (\\d+)$"), up_rgx("^up (\\d+)$");
+
 // O(n) where n is the number of lines in the file
 const vector<string> GetInput(const string file_name) {
   ifstream f(file_name);
@@ -55,56 +86,53 @@ int ExtractIntFromStringUsingRegex(const regex r, const string s) {
 }
 
 // O(1) since regexes and strings are short
-// Pairs are ordered <horizontal position, depth> - TODO clarify contract by creating a type
-pair<int, int> CalculateNewHDPosition(pair<int, int> curr_pos, const string step) {
-  int h = curr_pos.first;
-  int d = curr_pos.second;
+PositionAim CalculateNewHDPosition(PositionAim curr_pos, const string step) {
+  int h = curr_pos.get_horizontal_position();
+  int d = curr_pos.get_depth_position();
 
-  pair<int, int> new_pos(h, d);
-  pair<int, int> error(-1, -1);
-  regex forward("^forward (\\d+)$"), down("^down (\\d+)$"), up("^up (\\d+)$");
-
-  if (regex_match(step, forward)) {
-    int h_diff = ExtractIntFromStringUsingRegex(forward, step);
+  PositionAim error(false);
+  if (regex_match(step, forward_rgx)) {
+    int h_diff = ExtractIntFromStringUsingRegex(forward_rgx, step);
     if (h_diff == -1) {
       return error;
     }
-    new_pos.first = h + h_diff;
+
+    PositionAim new_pos(h + h_diff, d, -1);
+    return new_pos;
   }
-  else if (regex_match(step, down)) {
-    int d_diff = ExtractIntFromStringUsingRegex(down, step);
+  else if (regex_match(step, down_rgx)) {
+    int d_diff = ExtractIntFromStringUsingRegex(down_rgx, step);
     if (d_diff == -1) {
       return error;
     }
-    new_pos.second = d + d_diff;
+    
+    PositionAim new_pos(h, d + d_diff, -1);
+    return new_pos;
   }
-  else if (regex_match(step, up)) {
-    int d_diff = ExtractIntFromStringUsingRegex(up, step);
+  else if (regex_match(step, up_rgx)) {
+    int d_diff = ExtractIntFromStringUsingRegex(up_rgx, step);
     if (d_diff == -1) {
       return error;
     }
-    new_pos.second = d - d_diff;
+    
+    PositionAim new_pos(h, d - d_diff, -1);
+    return new_pos;
   }
   else {
     cout << "Step did not match any recognized directions" << endl;
     return error;
   }
-
-  return new_pos;
 }
 
 // O(1) since regexes and strings are short
-// Pairs are ordered <horizontal position, depth, aim>
-tuple<int, int, int> CalculateNewHDAimPosition(tuple<int, int, int> curr_pos_aim, const string step) {
-  int h = get<0>(curr_pos_aim);
-  int d = get<1>(curr_pos_aim);
-  int aim = get<2>(curr_pos_aim);
+PositionAim CalculateNewHDAimPosition(PositionAim curr_pos_aim, const string step) {
+  int h = curr_pos_aim.get_horizontal_position();
+  int d = curr_pos_aim.get_depth_position();
+  int aim = curr_pos_aim.get_aim();
 
-  tuple<int, int, int> error(-1, -1, -1);
-  regex forward("^forward (\\d+)$"), down("^down (\\d+)$"), up("^up (\\d+)$"); // TODO move to global
-
-  if (regex_match(step, forward)) {
-    int h_diff = ExtractIntFromStringUsingRegex(forward, step);
+  PositionAim error(false);
+  if (regex_match(step, forward_rgx)) {
+    int h_diff = ExtractIntFromStringUsingRegex(forward_rgx, step);
     if (h_diff == -1) {
       return error;
     }
@@ -112,27 +140,27 @@ tuple<int, int, int> CalculateNewHDAimPosition(tuple<int, int, int> curr_pos_aim
     // forward X does two things:
     //  It increases your horizontal position by X units.
     //  It increases your depth by your aim multiplied by X.
-    tuple<int, int, int> new_pos_aim(h + h_diff, d + (aim*h_diff), aim);
+    PositionAim new_pos_aim(h + h_diff, d + (aim*h_diff), aim);
     return new_pos_aim;
   }
-  else if (regex_match(step, down)) {
-    int d_diff = ExtractIntFromStringUsingRegex(down, step);
+  else if (regex_match(step, down_rgx)) {
+    int d_diff = ExtractIntFromStringUsingRegex(down_rgx, step);
     if (d_diff == -1) {
       return error;
     }
 
     // down X increases your aim by X units
-    tuple<int, int, int> new_pos_aim(h, d, aim + d_diff);
+    PositionAim new_pos_aim(h, d, aim + d_diff);
     return new_pos_aim;
   }
-  else if (regex_match(step, up)) {
-    int d_diff = ExtractIntFromStringUsingRegex(up, step);
+  else if (regex_match(step, up_rgx)) {
+    int d_diff = ExtractIntFromStringUsingRegex(up_rgx, step);
     if (d_diff == -1) {
       return error;
     }
 
     // up X decreases your aim by X units
-    tuple<int, int, int> new_pos_aim(h, d, aim - d_diff);
+    PositionAim new_pos_aim(h, d, aim - d_diff);
     return new_pos_aim;
   }
   else {
@@ -149,22 +177,30 @@ int main() {
   }
 
   // Part 1
-  pair<int, int> curr_pos(0,0);
+  PositionAim curr_pos(0, 0, -1);
   for (vector<string>::const_iterator i = file_contents.begin(); i != file_contents.end(); ++i) {
     curr_pos = CalculateNewHDPosition(curr_pos, *i);
+    if (!curr_pos.success) {
+      cout << "Calculating new position failed" << endl;
+      return -1;
+    }
   }
 
-  cout << "Part 1 Final position: " << curr_pos.first << " " << curr_pos.second << endl;
-  cout << "Part 1 Answer: " << curr_pos.first * curr_pos.second << endl;
+  cout << "Part 1 Final position: " << curr_pos.get_horizontal_position() << " " << curr_pos.get_depth_position() << endl;
+  cout << "Part 1 Answer: " << curr_pos.calculate_multiple_position() << endl;
 
   // Part 2
-  tuple<int, int, int> curr_pos_aim(0,0,0);
+  PositionAim curr_pos_aim(0, 0, 0);
   for (vector<string>::const_iterator i = file_contents.begin(); i != file_contents.end(); ++i) {
     curr_pos_aim = CalculateNewHDAimPosition(curr_pos_aim, *i);
+    if (!curr_pos.success) {
+      cout << "Calculating new position failed" << endl;
+      return -1;
+    }
   }
 
-  cout << "Part 2 Final position: " << get<0>(curr_pos_aim) << " " << get<1>(curr_pos_aim) << endl;
-  cout << "Part 2 Answer: " << get<0>(curr_pos_aim) * get<1>(curr_pos_aim) << endl;
+  cout << "Part 2 Final position: " << curr_pos_aim.get_horizontal_position() << " " << curr_pos_aim.get_depth_position() << endl;
+  cout << "Part 2 Answer: " << curr_pos_aim .calculate_multiple_position()<< endl;
   
   return 0;
 }
