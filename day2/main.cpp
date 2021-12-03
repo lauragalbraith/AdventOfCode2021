@@ -27,6 +27,7 @@ class PositionAim {
     int get_depth_position() {return depth_position;}
     int get_aim() {return aim;}
     int calculate_multiple_position() {return horizontal_position*depth_position;}
+    // TODO embrace object-oriented programming and move functionality to a class; perhaps a Navigation class with a PositionAim member
 };
 
 PositionAim::PositionAim(bool s) {
