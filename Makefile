@@ -33,5 +33,8 @@ day%_both.out: day%/main.cpp
 day3_puzz2_dep.out: $(FILE_UTIL_CPP) day3/puzzle2/main.cpp
 	$(COMPILER) $^ -o $@
 
+day4_both_debug.out: $(FILE_UTIL_CPP) day4/main.cpp
+	$(COMPILER) $(DEBUG_FLAGS) $^ -o $@
+
 clean:
 	rm -f *.out
