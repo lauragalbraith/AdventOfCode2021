@@ -5,6 +5,10 @@ COMPILER = g++
 FILE_UTIL_CPP = util/fileutil.cpp
 DEBUG_FLAGS = -static-liblsan -fsanitize=leak
 
+help:
+	@echo "Try targets 'all' or 'day1_puzz1_debug.out'"
+	@echo "If you get a message like 'make: *** No rule to make target 'day25_both.out'.  Stop.' : check that the necessary depencencies for day25 exist"
+
 all: day1_puzz1.out day1_puzz2.out day2_both.out day3_puzz1.out day3_puzz2_dep.out
 
 day%_puzz1_debug.out: day%/puzzle1/main.cpp
