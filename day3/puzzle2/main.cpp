@@ -3,17 +3,19 @@
 // See: https://adventofcode.com/2021
 // What is the life support rating of the submarine?
 
+#include "../../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
 #include <fstream>
 #include <bitset> // would use https://www.cplusplus.com/reference/vector/vector-bool/ if binary length was unknown
 #include <string>
+#include <tuple>
 #include <vector>
 #include <queue>
 
 using namespace std;
 
 // O(n) where n is the number of lines in the file
-const vector<string> ReadLinesFromFile(const string file_name) {
+/*const vector<string> ReadLinesFromFile(const string file_name) { // TODO remove once I get the header working
   ifstream f(file_name);
   vector<string> lines;
   if (f.is_open()) {
@@ -26,7 +28,7 @@ const vector<string> ReadLinesFromFile(const string file_name) {
     cout << "File could not be opened" << endl;
   }
   return lines;
-}
+}*/
 
 // O(x*n) runtime where x is the number of bit positions in the data (in our case, 12), and n is the initial number of binary values (which never decreases in the worst case)
 // O(x*n) memory used, because the whole list is only stored in one place in each iteration, though it is duplicated in the intiial memory allocation
@@ -123,9 +125,14 @@ bitset<12> CalculateCO2ScrubberRating(queue<bitset<12>> values) {
 
 int main() {
   // read in file, as vector of strings
-  vector<string> input = ReadLinesFromFile("../input.txt");
+  pair<vector<string>, int> file_result = ReadLinesFromFile("../input.txt");
+  if (file_result.second < 0) {
+    cout << "Failed to read file" << endl;
+    return -1;
+  }
 
   // parse lines from file as binary values
+  vector<string> input = file_result.first;
   queue<bitset<12>> initial_set;
   for (vector<string>::const_iterator i = input.begin(); i != input.end(); ++i) {
     bitset<12> binary_value(*i);
