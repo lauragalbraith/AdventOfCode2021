@@ -34,4 +34,4 @@ day3_puzz2_dep.out: $(FILE_UTIL_CPP) day3/puzzle2/main.cpp
 	$(COMPILER) $^ -o $@
 
 clean:
-	rm *.out
+	rm -f *.out
