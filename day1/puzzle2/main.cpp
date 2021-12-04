@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const string kInputFileName = "../input.txt";
+const string kInputFileName = "day1/input.txt";
 const int kWindowSize = 3;
 
 // O(m*n) where n is the length of input, and m is kWindowSize

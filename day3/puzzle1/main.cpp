@@ -30,7 +30,7 @@ const vector<string> ReadLinesFromFile(const string file_name) {
 
 int main() {
   // read in file, as vector of strings
-  vector<string> input = ReadLinesFromFile("../input.txt");
+  vector<string> input = ReadLinesFromFile("day3/input.txt");
 
   // parse lines from file as binary values
   vector<bitset<12>> values;

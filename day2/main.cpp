@@ -171,7 +171,7 @@ PositionAim CalculateNewHDAimPosition(PositionAim curr_pos_aim, const string ste
 }
 
 int main() {
-  vector<string> file_contents = GetInput("input.txt");
+  vector<string> file_contents = GetInput("day2/input.txt");
   if (file_contents.size() <= 0) {
     cout << "No file contents found" << endl;
     return -1;

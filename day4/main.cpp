@@ -23,7 +23,7 @@ const int kBingoNumRows = 5;
 const int kBingoNumColumns = 5;
 
 int main() {
-  pair<vector<string>, int> file_result = ReadLinesFromFile("day4/input.txt"); // TODO HERE this fails when running from the root dir - will need to change other directories to get this to work everywhere; could replace the input text file name in make... with grep :)
+  pair<vector<string>, int> file_result = ReadLinesFromFile("day4/input.txt");
   if (file_result.second < 0) {
     cout << "Failed to read file" << endl;
     return -1;

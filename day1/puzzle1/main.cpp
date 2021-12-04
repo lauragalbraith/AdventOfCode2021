@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const string kInputFileName = "input.txt";
+const string kInputFileName = "day1/input.txt";
 
 // O(n) where n is the length of input
 int BruteForce(const vector<int> input) {
