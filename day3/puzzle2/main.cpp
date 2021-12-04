@@ -14,22 +14,6 @@
 
 using namespace std;
 
-// O(n) where n is the number of lines in the file
-/*const vector<string> ReadLinesFromFile(const string file_name) { // TODO remove once I get the header working
-  ifstream f(file_name);
-  vector<string> lines;
-  if (f.is_open()) {
-    string line;
-    while (getline(f, line)) {
-      lines.push_back(line);
-    }
-  }
-  else {
-    cout << "File could not be opened" << endl;
-  }
-  return lines;
-}*/
-
 // O(x*n) runtime where x is the number of bit positions in the data (in our case, 12), and n is the initial number of binary values (which never decreases in the worst case)
 // O(x*n) memory used, because the whole list is only stored in one place in each iteration, though it is duplicated in the intiial memory allocation
 bitset<12> CalculateOxGenRating(queue<bitset<12>> values) {
