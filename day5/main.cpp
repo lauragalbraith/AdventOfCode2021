@@ -10,6 +10,7 @@
 #include <vector>
 #include <regex>
 #include <string>
+#include <cmath>
 
 using namespace std;
 
@@ -78,9 +79,7 @@ int main() {
     return -1;
   }
 
-  cout << "Map size: height " << max_height << " and width " << max_width << endl;
-
-  // Part 1:
+  // Design
   // option 1: keep track of the whole map, and what points are covered (vector of vector of ints representing number of lines covering the points) - this is constant-time access to fill in the map, so O(num_lines*max(map_width, map_height)) to fill all, but O(map_height*map_width) to finally check all the points - this could be optimized by keeping a counter while filling up the map, incrementing the counter when a map point goes from 1->2, O(1) -> O(num_lines*max(map_width, map_height))
   // option 2: check each pair of line segments against each other; if all horizontals were ordered by their y position, perhaps using a priority queue, it would be fast to check if two horizontal lines overlapped at the same y, because you know two horizontals cannot overlap if they have different y values (similarly with verticals), all the while keeping a list of qualifying intersection points; then all horizontals would have to be checked against the verticals with relevant y values in their range, and vice versa...
   // Given that I'm guessing Part 2 of the puzzle will be incorporating the diagonal line segments as well, or else plotting a path thru the map, I will go with Option 1
@@ -96,7 +95,7 @@ int main() {
   }
 
 
-  // If a line segment is horizontal or vertical, cover the map with it
+  // Cover the map with the line segments, accounting differently to track Part 1 and Part 2 answers separately
   int hor_vert_intersections = 0;
   for (auto l:line_segments) {
     if (IsHorizontal(l)) { // consistent y
@@ -114,7 +113,6 @@ int main() {
       }
 
       for (int x = x_start; x <= x_end; ++x) {
-        // cout << "covering " << x << "," << y << endl; // TODO remove after done
         int curr = covered_map[x][y];
         if (curr == 1) {
           ++hor_vert_intersections;
@@ -138,7 +136,6 @@ int main() {
       }
 
       for (int y = y_start; y <= y_end; ++y) {
-        // cout << "covering " << x << "," << y << endl; // TODO remove after done
         int curr = covered_map[x][y];
         if (curr == 1) {
           ++hor_vert_intersections;
@@ -151,7 +148,53 @@ int main() {
 
   cout << "Part 1 answer: " << hor_vert_intersections << endl;
   
-  // Part 2:
-  // TODO
+  // Part 2: now add in diagonal lines
+  int all_intersections = hor_vert_intersections;
+  for (auto l:line_segments) {
+    if (!IsHorizontal(l) && !IsVertical(l)) { // diagonal
+      // Check assumption that line is 45 degrees
+      if (abs(l.first.first - l.second.first) != abs(l.first.second - l.second.second)) {
+        cout << "Line is not diagonal: starting at " << l.first.first << "," << l.first.second << " and ending at " << l.second.first << "," << l.second.second << endl;
+        return -1;
+      }
+
+      // Line segments can have any direction; orient with x values before marking to avoid confusion and bugs
+      int x_start, x_end, y_start, y_end;
+      if (l.first.first <= l.second.first) { // line segment can be a single point
+        x_start = l.first.first;
+        y_start = l.first.second;
+
+        x_end = l.second.first;
+        y_end = l.second.second;
+      }
+      else {
+        x_start = l.second.first;
+        y_start = l.second.second;
+
+        x_end = l.first.first;
+        y_end = l.first.second;
+      }
+
+      for (int x = x_start, y = y_start; x <= x_end; ++x) {
+        int curr = covered_map[x][y];
+        if (curr == 1) {
+          ++all_intersections;
+        }
+
+        covered_map[x][y] = curr + 1;
+
+        // Line segments can have any direction; check before moving y to next point (loop handles x)
+        if (y < y_end) {
+          ++y;
+        }
+        else {
+          --y;
+        }
+      }
+    }
+  }
+
+  cout << "Part 2 answer: " << all_intersections << endl;
+
   return 0;
 }
