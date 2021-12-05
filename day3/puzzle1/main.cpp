@@ -3,38 +3,27 @@
 // See: https://adventofcode.com/2021
 // What is the power consumption of the submarine?
 
+#include "../../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
 #include <fstream>
 #include <bitset> // would use https://www.cplusplus.com/reference/vector/vector-bool/ if binary length was unknown
 #include <string>
 #include <vector>
+#include <tuple>
 
 using namespace std;
 
-// TODO figure out how to make this function accessible by every puzzle since many use it
-// O(n) where n is the number of lines in the file
-const vector<string> ReadLinesFromFile(const string file_name) {
-  ifstream f(file_name);
-  vector<string> lines;
-  if (f.is_open()) {
-    string line;
-    while (getline(f, line)) {
-      lines.push_back(line);
-    }
-  }
-  else {
-    cout << "File could not be opened" << endl;
-  }
-  return lines;
-}
-
 int main() {
   // read in file, as vector of strings
-  vector<string> input = ReadLinesFromFile("day3/input.txt");
+  pair<vector<string>,int> file_result = ReadLinesFromFile("day3/input.txt");
+  if (file_result.second < 0) {
+    cout << "File contents could not be read" << endl;
+    return -1;
+  }
 
   // parse lines from file as binary values
   vector<bitset<12>> values;
-  for (vector<string>::const_iterator i = input.begin(); i != input.end(); ++i) {
+  for (vector<string>::const_iterator i = file_result.first.begin(); i != file_result.first.end(); ++i) {
     bitset<12> binary_value(*i);
     values.push_back(binary_value);
   }

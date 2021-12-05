@@ -84,7 +84,7 @@ bitset<12> CalculateCO2ScrubberRating(queue<bitset<12>> values) {
 
     delete initial_set;
     // now specified: If 0 and 1 are equally common, keep values with a 0 in the position being considered
-    if (zeros_set->size() <= ones_set->size()) { // TODO if changing this single line from > to < gets me the right answer, pass a function into this function to be > or < to get rid of duplicate code
+    if (zeros_set->size() <= ones_set->size()) { // Consider: since the main difference between CalculateOxGenRating and CalculateCO2ScrubberRating is this evaluation block, pass a function into this function to be > or < to get rid of duplicate code
       initial_set = zeros_set;
       delete ones_set;
     }

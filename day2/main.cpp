@@ -4,13 +4,14 @@
 // What do you get if you multiply your final horizontal position by your final depth?
 // Part 1 and Part 2 treat the directions differently
 
+#include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
 #include <utility>
 #include <regex>
 #include <stdexcept>
+#include <tuple>
 
 using namespace std;
 
@@ -27,7 +28,6 @@ class PositionAim {
     int get_depth_position() {return depth_position;}
     int get_aim() {return aim;}
     int calculate_multiple_position() {return horizontal_position*depth_position;}
-    // TODO embrace object-oriented programming and move functionality to a class; perhaps a Navigation class with a PositionAim member
 };
 
 PositionAim::PositionAim(bool s) {
@@ -45,22 +45,6 @@ PositionAim::PositionAim(int h, int d, int a) {
 }
 
 const regex forward_rgx("^forward (\\d+)$"), down_rgx("^down (\\d+)$"), up_rgx("^up (\\d+)$");
-
-// O(n) where n is the number of lines in the file
-const vector<string> GetInput(const string file_name) {
-  ifstream f(file_name);
-  vector<string> lines;
-  if (f.is_open()) {
-    string line;
-    while (getline(f, line)) {
-      lines.push_back(line);
-    }
-  }
-  else {
-    cout << "File could not be opened" << endl;
-  }
-  return lines;
-}
 
 // O(m) where m is the length of the longer of regex/string
 int ExtractIntFromStringUsingRegex(const regex r, const string s) {
@@ -171,15 +155,15 @@ PositionAim CalculateNewHDAimPosition(PositionAim curr_pos_aim, const string ste
 }
 
 int main() {
-  vector<string> file_contents = GetInput("day2/input.txt");
-  if (file_contents.size() <= 0) {
-    cout << "No file contents found" << endl;
+  pair<vector<string>, int> file_result = ReadLinesFromFile("day2/input.txt");
+  if (file_result.second < 0) {
+    cout << "File could not be opened" << endl;
     return -1;
   }
 
   // Part 1
   PositionAim curr_pos(0, 0, -1);
-  for (vector<string>::const_iterator i = file_contents.begin(); i != file_contents.end(); ++i) {
+  for (vector<string>::const_iterator i = file_result.first.begin(); i != file_result.first.end(); ++i) {
     curr_pos = CalculateNewHDPosition(curr_pos, *i);
     if (!curr_pos.success) {
       cout << "Calculating new position failed" << endl;
@@ -192,7 +176,7 @@ int main() {
 
   // Part 2
   PositionAim curr_pos_aim(0, 0, 0);
-  for (vector<string>::const_iterator i = file_contents.begin(); i != file_contents.end(); ++i) {
+  for (vector<string>::const_iterator i = file_result.first.begin(); i != file_result.first.end(); ++i) {
     curr_pos_aim = CalculateNewHDAimPosition(curr_pos_aim, *i);
     if (!curr_pos.success) {
       cout << "Calculating new position failed" << endl;

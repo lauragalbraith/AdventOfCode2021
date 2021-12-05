@@ -3,8 +3,8 @@
 // See: https://adventofcode.com/2021
 // Consider sums of a three-measurement sliding window. How many sums are larger than the previous sum?
 
+#include "../../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -68,18 +68,16 @@ int SlidingSums(const vector<int> input, const int window_size) {
 
 int main() {
   // Read in file
-  ifstream input_file(kInputFileName);
-  vector<int> input;
-  if (input_file.is_open()) {
-    string line;
-    while (getline(input_file, line)) {
-      int x = stoi(line);
-      input.push_back(x);
-    }
-  }
-  else {
+  pair<vector<string>, int> file_result = ReadLinesFromFile(kInputFileName);
+  if (file_result.second < 0) {
     cout << "Unable to open file" << endl;
     return -1;
+  }
+
+  vector<int> input;
+  for (vector<string>::const_iterator i = file_result.first.begin(); i != file_result.first.end(); ++i) {
+    int x = stoi(*i);
+    input.push_back(x);
   }
 
   // Process input

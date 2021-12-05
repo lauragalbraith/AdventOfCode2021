@@ -3,10 +3,11 @@
 // See: https://adventofcode.com/2021
 // How many measurements are larger than the previous measurement?
 
+#include "../../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
+#include <tuple>
 
 using namespace std;
 
@@ -31,18 +32,16 @@ int BruteForce(const vector<int> input) {
 
 int main() {
   // Read in file
-  ifstream input_file(kInputFileName);
-  vector<int> input;
-  if (input_file.is_open()) {
-    string line;
-    while (getline(input_file, line)) {
-      int x = stoi(line);
-      input.push_back(x);
-    }
-  }
-  else {
-    cout << "Unable to open file" << endl;
+  pair<vector<string>, int> file_result = ReadLinesFromFile(kInputFileName);
+  if (file_result.second < 0) {
+    cout << "Unable to read file" << endl;
     return -1;
+  }
+
+  vector<int> input;
+  for (vector<string>::const_iterator i = file_result.first.begin(); i != file_result.first.end(); ++i) {
+    int x = stoi(*i);
+    input.push_back(x);
   }
 
   // Process input
