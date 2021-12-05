@@ -16,13 +16,6 @@
 
 using namespace std;
 
-/*
-Ideas:
-use classes to represent a bingo board, with operations on it like checking for a win, or perhaps marking a number returns a boolean on whether it won or not, operation to determine final score
-Since a bingo board is generally a bounded thing, and cannot be expected to grow to an unwieldy size, I will not worry about trying to optimize marking or win-checking
-use vector of vectors for bingo board representation
-*/
-
 class BingoBoard {
   private:
     class BingoCell { public: int val; bool marked; };
@@ -46,11 +39,11 @@ BingoBoard::BingoBoard(vector<string> rows) {
     throw invalid_argument("invalid number of rows");
   }
 
-  board_data = vector<vector<BingoCell>>();
-  board_data.resize(BingoBoard::kBingoNumRows);
+  this->board_data = vector<vector<BingoCell>>();
+  this->board_data.resize(BingoBoard::kBingoNumRows);
   for (int row = 0; row < rows.size(); ++row) {
-    board_data[row] = vector<BingoCell>();
-    board_data[row].resize(BingoBoard::kBingoNumColumns);
+    this->board_data[row] = vector<BingoCell>();
+    this->board_data[row].resize(BingoBoard::kBingoNumColumns);
     int col = 0;
 
     string remaining_row_str = rows[row];
@@ -61,8 +54,8 @@ BingoBoard::BingoBoard(vector<string> rows) {
         throw invalid_argument("invalid row format: '" + rows[row] + "'");
       }
 
-      board_data[row][col].val = stoi(m[1], NULL, 10);
-      board_data[row][col].marked = false;
+      this->board_data[row][col].val = stoi(m[1], NULL, 10);
+      this->board_data[row][col].marked = false;
 
       remaining_row_str = m.suffix().str();
       col++;
@@ -75,16 +68,16 @@ BingoBoard::BingoBoard(vector<string> rows) {
   }
 
   // Initialize remaining members
-  last_number_marked = -1;
-  has_won = false;
+  this->last_number_marked = -1;
+  this->has_won = false;
 }
 
 // PrintBoardState sends the board state to the ostream, where the marked numbers are noted
 // This was chosen instead of overloading operator<< to eliminate the need to expose the board data in public member functions
 void BingoBoard::PrintBoardState(ostream &out) {
-  out << "Won? " << (has_won ? "yes" : "no") << endl;
+  out << "Won? " << (this->has_won ? "yes" : "no") << endl;
 
-  for (vector<vector<BingoCell>>::const_iterator row_i = board_data.begin(); row_i != board_data.end(); ++row_i) {
+  for (vector<vector<BingoCell>>::const_iterator row_i = this->board_data.begin(); row_i != this->board_data.end(); ++row_i) {
     for (vector<BingoCell>::const_iterator col_i = (*row_i).begin(); col_i != (*row_i).end(); ++col_i) {
       if ((*col_i).marked) {
         out << "\033[3;32m"; // italic and green, because the bold isn't very visible
@@ -103,40 +96,41 @@ void BingoBoard::PrintBoardState(ostream &out) {
 }
 
 // Returns true if marking this number causes this board to win
+// Since a bingo board is generally a bounded thing, and cannot be expected to grow to an unwieldy size, I will not worry about trying to optimize marking or win-checking
 bool BingoBoard::MarkNumber(int num) {
-  for (int row_i = 0; row_i < board_data.size(); ++row_i) {
-    for (int col_i = 0; col_i < board_data[row_i].size(); ++col_i) {
-      if (board_data[row_i][col_i].val == num) {
+  for (int row_i = 0; row_i < this->board_data.size(); ++row_i) {
+    for (int col_i = 0; col_i < this->board_data[row_i].size(); ++col_i) {
+      if (this->board_data[row_i][col_i].val == num) {
         // Mark the matching cell
-        board_data[row_i][col_i].marked = true;
-        last_number_marked = num;
+        this->board_data[row_i][col_i].marked = true;
+        this->last_number_marked = num;
 
         // Check for win: along row
         bool try_row_win = true;
-        for (int check_col = 0; check_col < board_data[row_i].size(); ++check_col) {
-          if (!(board_data[row_i][check_col].marked)) {
+        for (int check_col = 0; check_col < this->board_data[row_i].size(); ++check_col) {
+          if (!(this->board_data[row_i][check_col].marked)) {
             try_row_win = false;
             break;
           }
         }
 
         if (try_row_win) {
-          has_won = true;
-          return has_won;
+          this->has_won = true;
+          return this->has_won;
         }
 
         // Check for win: along column
         bool try_col_win = true;
-        for (int check_row = 0; check_row < board_data.size(); ++check_row) {
-          if (!(board_data[check_row][col_i].marked)) {
+        for (int check_row = 0; check_row < this->board_data.size(); ++check_row) {
+          if (!(this->board_data[check_row][col_i].marked)) {
             try_col_win = false;
             break;
           }
         }
 
         if (try_col_win) {
-          has_won = true;
-          return has_won;
+          this->has_won = true;
+          return this->has_won;
         }
 
         return false;
@@ -149,12 +143,12 @@ bool BingoBoard::MarkNumber(int num) {
 
 // Returns a number less than 0 if the board has not reached the win condition
 int BingoBoard::FinalScore() {
-  if (!has_won) {
+  if (!this->has_won) {
     return -1;
   }
 
   int unmarked_sum = 0;
-  for (vector<vector<BingoCell>>::const_iterator i = board_data.begin(); i != board_data.end(); ++i) {
+  for (vector<vector<BingoCell>>::const_iterator i = this->board_data.begin(); i != this->board_data.end(); ++i) {
     for (vector<BingoCell>::const_iterator j = (*i).begin(); j != (*i).end(); ++j) {
       if (!(*j).marked) {
         unmarked_sum += (*j).val;
@@ -162,11 +156,11 @@ int BingoBoard::FinalScore() {
     }
   }
 
-  return unmarked_sum * last_number_marked;
+  return unmarked_sum * this->last_number_marked;
 }
 
 bool BingoBoard::HasWon() {
-  return has_won;
+  return this->has_won;
 }
 
 int main() {
