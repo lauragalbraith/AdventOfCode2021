@@ -9,7 +9,7 @@ help:
 	@echo "Try targets 'all' or 'day1_puzz1_debug.out'"
 	@echo "If you get a message like 'make: *** No rule to make target 'day25.out'.  Stop.' : check that the necessary depencencies for day25 exist"
 
-all: day1_puzz1.out day1_puzz2.out day2.out day3_puzz1.out day3_puzz2.out day4.out
+all: day1_puzz1.out day1_puzz2.out day2.out day3_puzz1.out day3_puzz2.out day4.out day5.out day6.out day7.out day8.out day9.out day10.out day11.out day12.out day13.out day14.out day15.out day16.out day17.out day18.out day19.out day20.out day21.out day22.out day23.out day24.out day25.out
 
 day%_puzz1_debug.out: $(FILE_UTIL_CPP) day%/puzzle1/main.cpp
 	$(COMPILER) $(DEBUG_FLAGS) $^ -o $@
