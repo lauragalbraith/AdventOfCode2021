@@ -14,7 +14,7 @@ using namespace std;
 
 int main() {
 
-  pair<vector<string>, int> file_results = ReadLinesFromFile("day06/input.txt");
+  pair<vector<string>, int> file_results = ReadLinesFromFile("day08/input.txt");
   if (file_results.second < 0) {
     cout << "Failed to read file" << endl;
     return -1;
