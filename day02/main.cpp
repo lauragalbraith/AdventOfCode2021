@@ -155,7 +155,7 @@ PositionAim CalculateNewHDAimPosition(PositionAim curr_pos_aim, const string ste
 }
 
 int main() {
-  pair<vector<string>, int> file_result = ReadLinesFromFile("day2/input.txt");
+  pair<vector<string>, int> file_result = ReadLinesFromFile("day02/input.txt");
   if (file_result.second < 0) {
     cout << "File could not be opened" << endl;
     return -1;

@@ -164,7 +164,7 @@ bool BingoBoard::HasWon() {
 }
 
 int main() {
-  pair<vector<string>, int> file_result = ReadLinesFromFile("day4/input.txt");
+  pair<vector<string>, int> file_result = ReadLinesFromFile("day04/input.txt");
   if (file_result.second < 0) {
     cout << "Failed to read file" << endl;
     return -1;

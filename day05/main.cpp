@@ -33,7 +33,7 @@ bool IsVertical(pair<pair<int,int>, pair<int,int>> line_segment) {
 }
 
 int main() {
-  pair<vector<string>, int> file_results = ReadLinesFromFile("day5/input.txt");
+  pair<vector<string>, int> file_results = ReadLinesFromFile("day05/input.txt");
   if (file_results.second < 0) {
     cout << "Failed to read file" << endl;
     return -1;
