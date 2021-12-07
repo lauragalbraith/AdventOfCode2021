@@ -4,7 +4,7 @@
 // Part 1: What will your final score be if you choose the first winning bingo board?
 // Part 2: Once the last board wins, what would its final score be?
 
-#include "../util/fileutil.hpp" // ReadLinesFromFile
+#include "../util/fileutil.hpp" // ReadLinesFromFile, ParseSeparatedInts
 #include <tuple>
 #include <vector>
 #include <string>
@@ -171,25 +171,11 @@ int main() {
   }
 
   // Parse bingo number list from file contents
-  vector<int> bingo_numbers;
-  string remaining_bingo_num_str = file_result.first[0];
-  smatch m;
-  regex r("(\\d+),");
-  while (regex_search(remaining_bingo_num_str, m, r)) {
-    if (m.size() != 2) {
-      cout << "Unexpected bingo number format" << endl;
-      return -1;
-    }
-
-    int bingo_num = stoi(m[1], NULL, 10);
-    bingo_numbers.push_back(bingo_num);
-
-    remaining_bingo_num_str = m.suffix().str();
+  pair<vector<int>,int> bingo_numbers_result = ParseSeparatedInts(file_result.first[0], ",");
+  if (bingo_numbers_result.second < 0) {
+    cout << "Unexpected bingo number format" << endl;
+    return -1;
   }
-
-  // include the last bingo number, which is not followed by the separator
-  int last_bingo_num = stoi(remaining_bingo_num_str, NULL, 10);
-  bingo_numbers.push_back(last_bingo_num);
 
   // Parse bingo boards from remaining file contents
   vector<BingoBoard> boards;
@@ -207,7 +193,7 @@ int main() {
   int first_win_final_score = -1;
   int last_win_final_score = -1;
   // Simulate to determine winning bingo board
-  for (vector<int>::const_iterator bingo_num = bingo_numbers.begin(); bingo_num != bingo_numbers.end(); ++bingo_num) {
+  for (vector<int>::const_iterator bingo_num = bingo_numbers_result.first.begin(); bingo_num != bingo_numbers_result.first.end(); ++bingo_num) {
     for (vector<BingoBoard>::iterator i = boards.begin(); i != boards.end(); ++i) {
       if ((*i).HasWon()) {
         continue; // for our purposes, we don't care about this board anymore

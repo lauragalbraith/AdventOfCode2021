@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <regex>
 
 using namespace std;
 
@@ -25,4 +26,30 @@ pair<vector<string>, int> ReadLinesFromFile(const string file_name) {
 
   pair<vector<string>, int> result(contents, 0);
   return result;
+}
+
+pair<vector<int>, int> ParseSeparatedInts(const string str, const string sep) {
+  pair<vector<int>, int> results(vector<int>(), -1);
+  string remaining_str = str;
+  smatch m;
+  string regex_str = "(\\d+)" + sep;
+  regex r(regex_str);
+  while (regex_search(remaining_str, m, r)) {
+    if (m.size() != 2) {
+      return results;
+    }
+
+    int i = stoi(m[1]);
+    results.first.push_back(i);
+    remaining_str = m.suffix().str();
+  }
+
+  // cover the case where there is a listed int after the last separator
+  if (remaining_str.length() > 0) {
+    int last = stoi(remaining_str, NULL, 10);
+    results.first.push_back(last);
+  }
+
+  results.second = 0;
+  return results;
 }

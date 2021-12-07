@@ -4,7 +4,7 @@
 // Part 1: How many lanternfish would there be after 80 days?
 // Part 2: How many lanternfish would there be after 256 days?
 
-#include "../util/fileutil.hpp" // ReadLinesFromFile
+#include "../util/fileutil.hpp" // ReadLinesFromFile, ParseSeparatedInts
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -22,41 +22,28 @@ int main() {
   }
 
   // Parse file input
-  vector<int> fish;
-
-  string remaining_file_str = file_results.first[0];
-  smatch m;
-  regex r("(\\d+),");
-  while (regex_search(remaining_file_str, m, r)) {
-    if (m.size() != 2) {
-      cout << "Unexpected file format" << endl;
-      return -1;
-    }
-
-    int f = stoi(m[1]);
-    fish.push_back(f);
-    remaining_file_str = m.suffix().str();
+  pair<vector<int>,int> fish_results = ParseSeparatedInts(file_results.first[0], ",");
+  if (fish_results.second < 0) {
+    cout << "Unexpected file format" << endl;
+    return -1;
   }
-  // get last fish number
-  int last_fish = stoi(remaining_file_str);
-  fish.push_back(last_fish);
 
   // Part 1:
   for (int day = 1; day <= 80; ++day) {
-    int days_starting_fish_count = fish.size();
+    int days_starting_fish_count = fish_results.first.size();
     for (int f = 0; f < days_starting_fish_count; ++f) {
-      int until_repro = fish[f];
+      int until_repro = fish_results.first[f];
       if (until_repro == 0) {
-        fish[f] = 6;
-        fish.push_back(8);
+        fish_results.first[f] = 6;
+        fish_results.first.push_back(8);
       }
       else {
-        fish[f] = until_repro - 1;
+        fish_results.first[f] = until_repro - 1;
       }
     }
   }
 
-  cout << "Part 1 answer: " << fish.size() << endl;
+  cout << "Part 1 answer: " << fish_results.first.size() << endl;
 
   // Part 2: after 256 days, there would be too many to store and/or too slow to compute. Thus, the strategy will change to tracking the fish a different way; instead keep track of how many fish have a certain int value
 
@@ -66,7 +53,7 @@ int main() {
   for (int i = 0; i <= 8; ++i) {
     fish_with_age[i] = 0;
   }
-  for (auto f:fish) {
+  for (auto f:fish_results.first) {
     fish_with_age[f] += 1;
   }
 
