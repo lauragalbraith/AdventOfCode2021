@@ -30,4 +30,4 @@ day%.out: $(FILE_UTIL_CPP) day%/main.cpp
 	$(COMPILER) $^ -o $@
 
 clean:
-	rm -f *.out
+	rm -f *.out test*.txt

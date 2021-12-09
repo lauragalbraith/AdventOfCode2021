@@ -1,1 +1,4 @@
+# C++ output executables
 *.out
+# Test files
+test*.txt
