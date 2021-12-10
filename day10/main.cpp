@@ -25,7 +25,7 @@ class ChunkRelations {
     ChunkRelations();
     bool IsCharacterOpening(const char& c);
     bool IsCharacterClosing(const char& c);
-    const char& ClosingCharacterForA(const char& a); // TODO FINALLY rename parameter and function to not mention A
+    const char& ClosingCharacterFor(const char& c);
     int SyntaxErrorScore(const char& c);
     unsigned long long int AutocompleteScore(const string& s);
 };
@@ -48,24 +48,24 @@ ChunkRelations::ChunkRelations() {
 }
 
 bool ChunkRelations::IsCharacterOpening(const char& c) {
-  return (open_close.find(c) != open_close.end()); // TODO FINALLY add this-> to all references in ChunkRelations functions
+  return (this->open_close.find(c) != this->open_close.end());
 }
 
 bool ChunkRelations::IsCharacterClosing(const char& c) {
   return (this->closing_syntax_error_scores.find(c) != this->closing_syntax_error_scores.end());
 }
 
-const char& ChunkRelations::ClosingCharacterForA(const char& a) {
-  auto r = open_close.find(a);
-  if (r == open_close.end()) {
+const char& ChunkRelations::ClosingCharacterFor(const char& c) {
+  auto r = this->open_close.find(c);
+  if (r == this->open_close.end()) {
     throw invalid_argument("Not an opening character");
   }
   return r->second;
 }
 
 int ChunkRelations::SyntaxErrorScore(const char& c) {
-  auto r = closing_syntax_error_scores.find(c);
-  if (r == closing_syntax_error_scores.end()) {
+  auto r = this->closing_syntax_error_scores.find(c);
+  if (r == this->closing_syntax_error_scores.end()) {
     throw invalid_argument("Not a closing character");
   }
   return r->second;
@@ -110,9 +110,7 @@ int main() {
 
       // ... else it must be closing
       // If it closes the last-seen opening character, it is valid
-      cout << "want to close " << s.top() << " with " << r.ClosingCharacterForA(s.top()) << endl;
-      if (r.ClosingCharacterForA(s.top()) == line[i]) {
-        cout << "we have succeeded!" << endl;
+      if (r.ClosingCharacterFor(s.top()) == line[i]) {
         s.pop();
         continue;
       }
@@ -121,18 +119,16 @@ int main() {
       corrupted = true;
       // Stop at the first incorrect closing character on each corrupted line to determine the syntax error score for the line
       sum_corrupted_score += r.SyntaxErrorScore(line[i]);
-      cout << "found corrupted character " << line[i] << " and now score is " << sum_corrupted_score << endl;
       break; // stop processing characters in the line
     }
 
     // Part 2:
     // All non-corrupted lines are incomplete
     // Using the stack, determine the appropriate closing characters needed and determine its score
-    cout << "size of the stack is " << s.size() << endl;
     if (!corrupted) {
       string missing_closing_chars = "";
       while (!s.empty()) {
-        missing_closing_chars.append(1, r.ClosingCharacterForA(s.top()));
+        missing_closing_chars.append(1, r.ClosingCharacterFor(s.top()));
         s.pop();
       }
       autocomplete_scores.push_back(r.AutocompleteScore(missing_closing_chars));
