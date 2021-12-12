@@ -143,4 +143,4 @@ int main() {
   return 0;
 }
 
-// TODO ideas for future days: take in a flag from cmdline to run part 1 or part 2; add compiler warnings/errors (-Wall, -Werror, etc.)
+// TODO ideas for future days: take in a flag from cmdline to run part 1 or part 2; add compiler warnings/errors (-Wall, -Werror, etc.); make a class template for puzzle solvers; i.e. the template would return a string solution for puzzle 1/2 (so it can just be printed to the console), and each day could implement the template i.e. class Day11
