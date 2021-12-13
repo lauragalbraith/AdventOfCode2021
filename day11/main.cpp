@@ -32,6 +32,55 @@ vector<pair<int,int>> ValidAdjacentCoordinates(const int row, const int col, con
   return coords;
 }
 
+int PerformStep(vector<vector<int>>& octopus_energies) {
+  queue<pair<int,int>> flashed_octopuses;
+  int flashes_during_step = 0;
+
+  // Increment all octopuses once, adding flashing ones to the queue to process
+  for (int row = 0; row < octopus_energies.size(); ++row) {
+    for (int col = 0; col < octopus_energies[row].size(); ++col) {
+      int curr = octopus_energies[row][col];
+      octopus_energies[row][col] += 1;
+
+      // Check if the octopus flashes
+      if (curr == 9) {
+        ++flashes_during_step;
+        for (auto a:ValidAdjacentCoordinates(row, col, octopus_energies.size(), octopus_energies[row].size())) {
+          flashed_octopuses.push(a);
+        }
+      }
+    }
+  }
+
+  // Process all octopus flashes by incrementing adjacent octopuses
+  while (!flashed_octopuses.empty()) {
+    pair<int,int> o = flashed_octopuses.front();
+    flashed_octopuses.pop();
+
+    int curr = octopus_energies[o.first][o.second];
+    octopus_energies[o.first][o.second] += 1;
+
+    // Check if this octopus now flashes
+    if (curr == 9) {
+      ++flashes_during_step;
+      for (auto a:ValidAdjacentCoordinates(o.first, o.second, octopus_energies.size(), octopus_energies[o.first].size())) {
+        flashed_octopuses.push(a);
+      }
+    }
+  }
+
+  // Reset octopuses that have flashed to an energy level of 0
+  for (int row = 0; row < octopus_energies.size(); ++row) {
+    for (int col = 0; col < octopus_energies[row].size(); ++col) {
+      if (octopus_energies[row][col] >= 10) {
+        octopus_energies[row][col] = 0;
+      }
+    }
+  }
+
+  return flashes_during_step;
+}
+
 int main() {
   pair<vector<string>, int> file_results = ReadLinesFromFile("day11/input.txt");
   if (file_results.second < 0) {
@@ -52,57 +101,32 @@ int main() {
 
   // Part 1:
   unsigned long long int flash_count = 0;
+  int first_all_flash_step = -1;
 
-  for (int step = 1; step <= 100; ++step) {
-    queue<pair<int,int>> flashed_octopuses;
+  int step = 1;
+  for (; step <= 100; ++step) {
+    int flashes_during_step = PerformStep(octopus_energies);
 
-    // Increment all octopuses once, adding flashing ones to the queue to process
-    for (int row = 0; row < octopus_energies.size(); ++row) {
-      for (int col = 0; col < octopus_energies[row].size(); ++col) {
-        int curr = octopus_energies[row][col];
-        octopus_energies[row][col] += 1;
-
-        // Check if the octopus flashes
-        if (curr == 9) {
-          ++flash_count;
-          for (auto a:ValidAdjacentCoordinates(row, col, octopus_energies.size(), octopus_energies[row].size())) {
-            flashed_octopuses.push(a);
-          }
-        }
-      }
+    // Count up if all octopuses flashed simultaneously
+    if (first_all_flash_step < 0 && flashes_during_step == octopus_energies.size() * octopus_energies[0].size()) {
+      first_all_flash_step = step;
     }
-
-    // Process all octopus flashes by incrementing adjacent octopuses
-    while (!flashed_octopuses.empty()) {
-      pair<int,int> o = flashed_octopuses.front();
-      flashed_octopuses.pop();
-
-      int curr = octopus_energies[o.first][o.second];
-      octopus_energies[o.first][o.second] += 1;
-
-      // Check if this octopus now flashes
-      if (curr == 9) {
-        ++flash_count;
-        for (auto a:ValidAdjacentCoordinates(o.first, o.second, octopus_energies.size(), octopus_energies[o.first].size())) {
-          flashed_octopuses.push(a);
-        }
-      }
-    }
-
-    // Reset octopuses that have flashed to an energy level of 0
-    for (int row = 0; row < octopus_energies.size(); ++row) {
-      for (int col = 0; col < octopus_energies[row].size(); ++col) {
-        if (octopus_energies[row][col] >= 10) {
-          octopus_energies[row][col] = 0;
-        }
-      }
-    }
+    flash_count += flashes_during_step;
   }
 
   cout << "Part 1 answer: " << flash_count << endl;
 
-  // Part 2:
-  // TODO
+  for (; first_all_flash_step < 0 ; ++step) {
+    int flashes_during_step = PerformStep(octopus_energies);
+    // Count up if all octopuses flashed simultaneously
+    if (flashes_during_step == octopus_energies.size() * octopus_energies[0].size()) {
+      break;
+    }
+  }
+
+  cout << "Part 2 answer: " << step << endl;
 
   return 0;
 }
+
+// TODO ideas for future days: determine what version of C++ my compiler is using
