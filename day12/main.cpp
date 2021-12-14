@@ -1,8 +1,8 @@
 // main.cpp: Laura Galbraith
 // Description: solver for Puzzles 1 and 2 of Day 12 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
-// Part 1: How many paths through this cave system are there that visit small caves at most once?
-// Part 2: TODO
+// Part 1: don't visit small caves more than once; how many paths through this cave system are there that visit small caves at most once?
+// Part 2: a single small cave can be visited at most twice, and the remaining small caves can be visited at most once; how many paths through this cave system are there?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -31,12 +31,12 @@ class Cave {
     const string& GetName();
     bool IsSmall();
 
-    bool discovered;
+    unsigned int discovered_times;
 };
 
 Cave::Cave(const string& n) : name(n) {
   this->adjacent_caves.resize(0);
-  this->discovered = false;
+  this->discovered_times = 0;
 }
 
 void Cave::AddAdjacentCave(Cave* other) {
@@ -57,11 +57,12 @@ bool Cave::IsSmall() {
   return (this->name[0] <= 'z' && this->name[0] >= 'a');
 }
 
-// DepthFirstPaths follows the recursive DFS algorithm to return a list of all paths from c to end, using the provided path so far
-const vector<string> DepthFirstPaths(Cave* c, const string& path_so_far) {
+// DepthFirstPathsWithSmallOnce follows the recursive DFS algorithm to return a list of all paths from c to end, using the provided path so far
+// It will only visit any small caves on the path once
+const vector<string> DepthFirstPathsWithSmallOnce(Cave* c, const string& path_so_far) {
   // Mark the cave as discovered, unless it is a big cave (which can be visited more than once in a single path) or end cave, which is specifically detected
   if ((c->IsSmall() || c->GetName() == start_cave_name) && c->GetName() != end_cave_name) {
-    c->discovered = true;
+    c->discovered_times = 1;
   }
 
   // Include the cave on the path so far
@@ -84,8 +85,8 @@ const vector<string> DepthFirstPaths(Cave* c, const string& path_so_far) {
   // For all adjacent caves to c...
   for (auto a:c->GetAdjacentCaves()) {
     // ... if the adjacent cave is not discovered yet, recursively compute paths from it
-    if (!a->discovered) {
-      vector<string> paths = DepthFirstPaths(a, current_path);
+    if (a->discovered_times == 0) {
+      vector<string> paths = DepthFirstPathsWithSmallOnce(a, current_path);
       for (auto p:paths) {
         all_paths.push_back(p);
       }
@@ -93,8 +94,63 @@ const vector<string> DepthFirstPaths(Cave* c, const string& path_so_far) {
   }
 
   // Now that we've explored all paths through this cave, unmark it so other paths called outside this recursion can use it anew
-  if (c->discovered) {
-    c->discovered = false;
+  if (c->discovered_times > 0) {
+    c->discovered_times = 0;
+  }
+
+  return all_paths;
+}
+
+// DepthFirstPathsWithOneSmallTwice follows the recursive DFS algorithm to return a list of all paths from c to end, using the provided path so far
+// It can visit a single small cave twice, but any other small cave on the path once
+// Because of this, the same path may be found by more than one recursion, so the map collection de-duplicates our results
+const map<string,bool> DepthFirstPathsWithOneSmallTwice(Cave* c, const string& path_so_far, Cave* twice_small) {
+  // Mark the cave as discovered, unless it is a big cave (which can be visited more than once in a single path) or end cave, which is specifically detected
+  if ((c->IsSmall() || c->GetName() == start_cave_name) && c->GetName() != end_cave_name) {
+    c->discovered_times += 1;
+  }
+
+  // Include the cave on the path so far
+  stringstream s;
+  s << path_so_far;
+  if (path_so_far != "") {
+    s << ",";
+  }
+  s << c->GetName();
+  string current_path = s.str();
+
+  map<string,bool> all_paths;
+
+  // Check if we've reached the end of the caves
+  if (c->GetName() == end_cave_name) {
+    all_paths[current_path] = true;
+    return all_paths;
+  }
+
+  // For all adjacent caves to c...
+  for (auto a:c->GetAdjacentCaves()) {
+    // ... if the adjacent cave has not been discovered too many times yet, recursively compute paths from it
+    // If the current cave is small and is not start/end, branch and run recursions on all possibilities:
+    if (c->IsSmall() && c->GetName() != start_cave_name && c->GetName() != end_cave_name) {
+      // ... if the visited-twice small cave hasn't been decided yet, use the current cave
+      if (twice_small == NULL) {
+        if (a->discovered_times == 0) { // c cannot be adjacent to itself
+          map<string,bool> paths = DepthFirstPathsWithOneSmallTwice(a, current_path, c);
+          for (auto p:paths) { all_paths[p.first] = p.second; }
+        }
+      }
+    }
+
+    // ... do not pick the current cave, and continue on with whatever the given visited-twice cave is
+    if (a->discovered_times == 0 || (a == twice_small && twice_small->discovered_times < 2)) {
+      map<string,bool> paths = DepthFirstPathsWithOneSmallTwice(a, current_path, twice_small);
+      for (auto p:paths) { all_paths[p.first] = p.second; }
+    }
+  }
+
+  // Now that we've explored all paths through this cave, decrease its discover count it so other paths called outside this recursion can use it anew
+  if (c->discovered_times > 0) {
+    c->discovered_times -= 1;
   }
 
   return all_paths;
@@ -157,12 +213,20 @@ int main() {
   // Perform a depth-first search to determine all paths from 'start' cave to 'end' cave
   // For Part 1, at least, big caves (uppercase letters) can be visited more than once on a path, but small caves cannot
   // This means that small caves (and start/end) will be marked "discovered" in the process of carving a path, but big caves will not
-  vector<string> all_paths = DepthFirstPaths(start_cave, "");
-
+  vector<string> all_paths = DepthFirstPathsWithSmallOnce(start_cave, "");
   cout << "Part 1 answer: " << all_paths.size() << endl;
 
+  // Make sure that all nodes are undiscovered when part 2 starts running
+  for (auto cave:all_caves) {
+    if (cave.second->discovered_times != 0) {
+      cout << "Cave " << cave.second->GetName() << " is still marked 'discovered' after Part 1 algorithm finished" << endl;
+      return -1;
+    }
+  }
+
   // Part 2:
-  // TODO
+  map<string,bool> deduped_paths = DepthFirstPathsWithOneSmallTwice(start_cave, "", NULL);
+  cout << "Part 2 answer: " << deduped_paths.size() << endl;
 
   // Free all memory allocated
   for (auto cave:all_caves) {
