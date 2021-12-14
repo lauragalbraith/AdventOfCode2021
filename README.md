@@ -5,3 +5,4 @@ Solving the Advent of Code problem set for the year 2021 - see https://adventofc
 All code in this repo was written by the repo owner, Laura Galbraith
 
 C++ style considerations from https://developers.google.com/edu/c++/getting-started?authuser=0
+Version of C++ used: 2014 standard (c++ 14)

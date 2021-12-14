@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 11 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: Given the starting energy levels of the dumbo octopuses in your cavern, simulate 100 steps. How many total flashes are there after 100 steps?
-// Part 2: TODO
+// Part 2: What is the first step during which all octopuses flash?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -128,5 +128,3 @@ int main() {
 
   return 0;
 }
-
-// TODO ideas for future days: determine what version of C++ my compiler is using
