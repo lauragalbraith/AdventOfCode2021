@@ -235,3 +235,5 @@ int main() {
 
   return 0;
 }
+
+// TODO: another way to do this would be to similarly branch, but then not accept a path if no small caves were visited twice (because that path would already be represented in the Part 1 answer) - so we could just add Part1 and Part2 together
