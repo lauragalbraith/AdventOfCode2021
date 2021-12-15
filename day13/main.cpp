@@ -185,7 +185,7 @@ int main() {
 
   cout << "Part 2 answer:" << endl;
   // Print the final paper so it's easier to read
-  // Turns out Letters are easiest to read iterating over y then x
+  // Turns out Letters are easiest to read iterating over y then x - TODO this is because I was conceiving of the axes as switched: correct all spots where coordinates are referenced
   for (int y = 0; y < new_paper[0].size(); ++y) {
     for (int x = 0; x < new_paper.size(); ++x) {
       if (new_paper[x][y]) {
