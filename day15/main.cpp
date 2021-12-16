@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 15 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: What is the lowest total risk of any path from the top left to the bottom right?
-// Part 2: TODO
+// Part 2: Using the full map, what is the lowest total risk of any path from the top left to the bottom right?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -87,7 +87,6 @@ vector<node> AdjacentNodes(const node& n, const vector<vector<int>>& map) {
     if (c.second < 0 || c.second >= map[c.first].size()) {
       continue;
     }
-    
 
     final.push_back(c);
   }
@@ -125,25 +124,17 @@ vector<node> AStar(
     vector<node> adjacent_coords = AdjacentNodes(curr.coordinate, node_map);
     for (auto a:adjacent_coords) {
       int tentative_g_score = g_score[curr.coordinate] + node_map[a.first][a.second]; // cost of moving to the adjacent node is equal to that node's risk level
-      // cout << "Considering adjacent " << a.first << "," << a.second << " to current " << curr.coordinate.first  << "," << curr.coordinate.second << "; tentative gScore of " << tentative_g_score << endl;
       // If the adjacent node does not have a definitive gScore yet, the default is infinity
       if (g_score.find(a) == g_score.end() || tentative_g_score < g_score[a]) {
         // this adjacent node is the best option for curr to travel to
         came_from[a] = curr.coordinate;
         g_score[a] = tentative_g_score;
+
         int f_score = tentative_g_score + (*h)(a, end);
-        // cout << "Passed! adding to open_set with fScore " << f_score << endl;
         // "With a consistent heuristic, A* is guaranteed to find an optimal path without processing any node more than once" - so we will not check if the adjacent node is already in open_set before adding it, which would necessitate storing all nodes in open_set in a separate structure
         open_set.push(FScoreCoordinate(f_score, a));
-
-        // TODO NEXT if a is in open_set, we really have no way to tell, but we need to change its f_score value ; if a is NOT in open_set, add it with fscore=tentative_g_score+h(a)
-        // TODO idea: with the combined priority queue representation of fScore and openSet, we cannot do this step of the algo efficiently; need to consider storing them separately, having a class to combine them maybe...
-        // Could I have a parallel fScore map and openSet priority queue? every time an element is inserted into one, it is also inserted into the other? and vice versa every time an element is popped off of the queue, it is found and deleted in the fScore map? the queue is implemented the same way I have now (fScore with a coordinate pair), and the map key is coordinate pair, map value as fScore; upon "openSet.Remove(current)", fScore's entry for it can be deleted (it doesn't have to be, but probably smart); upon "fScore[neighbor] := tentative_gScore + h(neighbor) / openSet.add(neighbor)", perform fScore.find(neighbor) - if it's there, THIS IS STILL WHERE THE TROUBLE IS, because we have to pull it out of the queue and change it (and I'm sure there's no way to dynamically change values in a pqueue); could insert it a second time, and make a revoke-list map of node to int, and if we pop something off of the openset that matches something in the revoke-list, remove it from the revoke list and pop it from the pqueue, and continue in the loop (just in case the same fscore/node combo is inserted twice) - BEFORE I IMPLEMENT THIS - I want to ask M about this
-        // "With a consistent heuristic, A* is guaranteed to find an optimal path without processing any node more than once" - TODO HERE think about this for a while to determine how f(node) and g(node) work in this case, and if it means that the same coordinate is never pulled off the queue twice (looking at the h/d/x/y property, I think it holds here, but I want to understand it conceptually)
       }
     }
-
-    // cout << endl;
   }
 
   return vector<node>(); // failure case
@@ -187,11 +178,6 @@ int main() {
     return -1;
   }
 
-  // cout << "Lowest risk path is:" << endl; // TODO FINALLY remove debug statements
-  // for (auto p:lowest_risk_path) {
-    // cout << p.first << "," << p.second << endl;
-  // }
-
   int total_risk = 0;
   for (int i=1; i < lowest_risk_path.size(); ++i) {
     total_risk += risk_map[lowest_risk_path[i].first][lowest_risk_path[i].second];
@@ -200,7 +186,56 @@ int main() {
   cout << "Part 1 answer: " << total_risk << endl;
 
   // Part 2:
-  // TODO
+  // Expand map
+  const int grow_factor = 5;
+  int initial_map_rows = risk_map.size();
+  int initial_map_cols = risk_map[0].size();
+
+  // resize map
+  risk_map.resize(initial_map_rows * grow_factor);
+  for (int row = 0; row < risk_map.size(); ++row) {
+    risk_map[row].resize(initial_map_cols * grow_factor);
+  }
+
+  // fill in further values
+  for (int row = 0; row < risk_map.size(); ++row) {
+    for (int col = 0; col < risk_map[row].size(); ++col) {
+      if (row < initial_map_rows && col < initial_map_cols) {
+        continue; // the original values don't change
+      }
+
+      // since the values are getting filled out on a single row, left to right, copy from the left then from above
+      int existing_val;
+      if (row - initial_map_rows < 0) {
+        // copy from the columns to the left
+        existing_val = risk_map[row][col - initial_map_cols];
+      }
+      else {
+        // copy from above since it's already been filled in
+        existing_val = risk_map[row - initial_map_rows][col];
+      }
+
+      risk_map[row][col] = existing_val == 9 ? 1 : existing_val + 1;
+    }
+  }
+
+  // Run the algorithm again
+  lowest_risk_path = AStar(
+    node(0,0),
+    node(risk_map.size()-1,risk_map[risk_map.size()-1].size()-1),
+    risk_map,
+    &AStarHeuristic);
+  if (lowest_risk_path.size() <= 0) {
+    cout << "Algorithm failed to find a path from start to end" << endl;
+    return -1;
+  }
+
+  total_risk = 0;
+  for (int i=1; i < lowest_risk_path.size(); ++i) {
+    total_risk += risk_map[lowest_risk_path[i].first][lowest_risk_path[i].second];
+  }
+
+  cout << "Part 2 answer: " << total_risk << endl;
 
   return 0;
 }
