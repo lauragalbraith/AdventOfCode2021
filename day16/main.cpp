@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 16 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: What do you get if you add up the version numbers in all packets?
-// Part 2: TODO
+// Part 2: What do you get if you evaluate the expression represented by your hexadecimal-encoded BITS transmission?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -38,13 +38,13 @@ vector<bool> hex_to_bin(const char& c) {
 }
 
 // ParseBytesAsInt will iterate over the bytes pointed to between the given iterators (most significant bit first) and return the represented binary number
-unsigned int ParseBytesAsInt(vector<bool>::const_iterator current, const vector<bool>::const_iterator& end) {
+unsigned long long int ParseBytesAsInt(vector<bool>::const_iterator current, const vector<bool>::const_iterator& end) {
   double num_bytes = end - current;
   if (num_bytes <= 0) {
     throw invalid_argument("current iterator must be before end iterator");
   }
 
-  unsigned int decimal = 0;
+  unsigned long long int decimal = 0;
   double current_base = pow(2.0, num_bytes - 1);
 
   while (current != end) {
@@ -58,7 +58,7 @@ unsigned int ParseBytesAsInt(vector<bool>::const_iterator current, const vector<
 }
 
 // 100 (4) is a literal value packet; any other type ID represents an operator
-enum PacketType { op = 0, literal_val = 4 };
+enum PacketType { sum=0, product=1, minimum=2, maximum=3, literal_val=4, gt=5, lt=6, eq=7 };
 
 class Packet {
   protected:
@@ -68,6 +68,7 @@ class Packet {
     Packet(const unsigned int& ver, const PacketType& type_id) : version(ver), type(type_id) {}
     unsigned int GetVersion() { return this->version; }
     PacketType GetType() { return this->type; }
+    virtual unsigned long long int GetValue() { return 0; }
     virtual unsigned int SumPacketAndSubPacketVersions() { return 0; }
     virtual ~Packet() {} // must be made virtual so that we can delete any packet using the derived class's destructor
 };
@@ -76,15 +77,17 @@ pair<Packet*,vector<bool>::const_iterator> ParseSinglePacket(vector<bool>::const
 
 class LiteralValuePacket : public Packet {
   private:
-    unsigned int value;
+    unsigned long long int value;
   public:
-    LiteralValuePacket(const unsigned int& val, const unsigned int& ver) : Packet(ver,literal_val), value(val) {}
-    unsigned int GetValue() { return this->value; }
-    unsigned int SumPacketAndSubPacketVersions() { return this->version; }
-    ~LiteralValuePacket() {} // No internal memory usage to clear
+    LiteralValuePacket(const unsigned long long int& val, const unsigned int& ver) : Packet(ver,literal_val), value(val) {}
+
     static pair<LiteralValuePacket*,vector<bool>::const_iterator> ParseLiteralValuePacket(
       vector<bool>::const_iterator start,
       const vector<bool>::const_iterator& end);
+    unsigned long long int GetValue() { return this->value; }
+    unsigned int SumPacketAndSubPacketVersions() { return this->version; }
+
+    ~LiteralValuePacket() {} // No internal memory usage to clear
 };
 
 // ParseLiteralValuePacket will iterate over the bytes pointed to between the given iterators (most significant bit first) and return the represented literal value packet
@@ -98,7 +101,6 @@ pair<LiteralValuePacket*,vector<bool>::const_iterator> LiteralValuePacket::Parse
   // Parse header
   unsigned int version = ParseBytesAsInt(current, current+3);
   current += 6; // skip type parsing, as only one value is for literal values
-  cout << "Version of literal value packet: " << version << endl;
 
   // Despite the rules mentioning leading zeros (padding until length is 4x bits), this does not exist anywhere in the input
 
@@ -115,7 +117,7 @@ pair<LiteralValuePacket*,vector<bool>::const_iterator> LiteralValuePacket::Parse
   value_bits.insert(value_bits.end(),current+1, current+5);
   current += 5;
 
-  unsigned int value = ParseBytesAsInt(value_bits.begin(), value_bits.end());
+  unsigned long long int value = ParseBytesAsInt(value_bits.begin(), value_bits.end());
 
   // Form operator packet object
   LiteralValuePacket* lv_p = new LiteralValuePacket(value, version);
@@ -129,18 +131,22 @@ class OperatorPacket : public Packet {
   private:
     vector<Packet*> contained_packets;
   public:
-    OperatorPacket(const unsigned int& ver, const vector<Packet*>& sub_packets) : Packet(ver,op) {
+    OperatorPacket(
+      const unsigned int& ver,
+      const PacketType& type,
+      const vector<Packet*>& sub_packets) : Packet(ver, type)
+    {
       this->contained_packets.resize(sub_packets.size());
       for (int i = 0; i < sub_packets.size(); ++i) {
         this->contained_packets[i] = sub_packets[i];
       }
     }
 
-    void AppendContainedPacket(Packet* p) { this->contained_packets.push_back(p); } // TODO FINALLY remove this if my code can instead set all the contained packets in the object constructor
     static pair<OperatorPacket*,vector<bool>::const_iterator> ParseOperatorPacket(
       vector<bool>::const_iterator current,
       const vector<bool>::const_iterator& end);
     vector<Packet*> GetContainedPackets() { return this->contained_packets; }
+    unsigned long long int GetValue();
     unsigned int SumPacketAndSubPacketVersions() {
       unsigned int total = this->version;
       for (auto p:this->contained_packets) {
@@ -172,12 +178,10 @@ pair<OperatorPacket*,vector<bool>::const_iterator> OperatorPacket::ParseOperator
   unsigned int type_id = ParseBytesAsInt(current, current+3);
   current += 3;
   PacketType type = static_cast<PacketType>(type_id);
-  cout << "Version of operator packet: " << version << ", Type: " << type << endl;
 
   // Parse length type ID
   bool length_type_id = *current;
   current += 1;
-  cout << "Length type ID: " << length_type_id << endl;
   
   // Parse the length bits and sub-packets
   vector<Packet*> sub_packets;
@@ -185,7 +189,6 @@ pair<OperatorPacket*,vector<bool>::const_iterator> OperatorPacket::ParseOperator
     // Note: this length does not account for leading zeroes at the end of the operator packet
     unsigned int bit_length_sub = ParseBytesAsInt(current, current + 15);
     current += 15;
-    cout << "Length in bits of the sub-packets: " << bit_length_sub << " compared to length until end: " << (end - current) << endl;
     vector<bool>::const_iterator sub_packets_limit = current + bit_length_sub;
 
     // parse sub-packets
@@ -200,7 +203,6 @@ pair<OperatorPacket*,vector<bool>::const_iterator> OperatorPacket::ParseOperator
     // Note: this number is only the number of sub-packets, not sub-sub-packets (ex. if this operator contains an operator which contains a literal, the number of sub-packets of this operator will be 1)
     unsigned int num_sub_packets = ParseBytesAsInt(current, current + 11);
     current += 11;
-    cout << "Number of sub-packets: " << num_sub_packets << endl;
     sub_packets.resize(num_sub_packets);
 
     // parse sub_packets
@@ -213,11 +215,59 @@ pair<OperatorPacket*,vector<bool>::const_iterator> OperatorPacket::ParseOperator
   }
 
   // Form operator packet object
-  OperatorPacket* op_p = new OperatorPacket(version, sub_packets); // TODO PART 2: if type matters beyond operator/literal, pass it in here
+  OperatorPacket* op_p = new OperatorPacket(version, type, sub_packets);
 
   // Despite the rules mentioning trailing zero-padding in packets, none exists except in the outermost packet
 
   return pair<OperatorPacket*,vector<bool>::const_iterator>(op_p, current);
+}
+
+unsigned long long int OperatorPacket::GetValue() {
+  switch(this->type) {
+    case sum: {
+      unsigned long long int total = 0;
+      for (auto p:this->contained_packets) {
+        total += p->GetValue();
+      }
+      return total;
+    }
+
+    case product: {
+      unsigned long long int total = 1;
+      for (auto p:this->contained_packets) {
+        total *= p->GetValue();
+      }
+      return total;
+    }
+
+    case minimum: {
+      unsigned long long int min_val = 0;
+      for (auto p:this->contained_packets) {
+        unsigned long long int curr = p->GetValue();
+        if (min_val == 0 || curr < min_val) { min_val = curr; }
+      }
+      return min_val;
+    }
+
+    case maximum: {
+      unsigned long long int max_val = 0;
+      for (auto p:this->contained_packets) {
+        unsigned long long int curr = p->GetValue();
+        if (curr > max_val) { max_val = curr; }
+      }
+      return max_val;
+    }
+
+    case gt: return (this->contained_packets[0]->GetValue() > this->contained_packets[1]->GetValue() ? 1 : 0);
+
+    case lt: return (this->contained_packets[0]->GetValue() < this->contained_packets[1]->GetValue() ? 1 : 0);
+
+    case eq: return (this->contained_packets[0]->GetValue() == this->contained_packets[1]->GetValue() ? 1 : 0);
+
+    default: throw logic_error("operator packet has invalid type");
+  }
+
+  return 0;
 }
 
 // ParseSinglePacket calls the parsing function depends on the packet type
@@ -249,12 +299,6 @@ int main() {
     input.insert(input.end(), binary_four.begin(), binary_four.end());
   }
 
-  cout << "Input:" << endl; // TODO FINALLY remove all debug statements
-  for (auto b:input) {
-    cout << b;
-  }
-  cout << endl << endl;
-
   // Part 1:
   // Since we know that the whole BITS transmission is a single packet "which itself contains many other packets", it must be an operator type
   pair<OperatorPacket*,vector<bool>::const_iterator> packet_result = OperatorPacket::ParseOperatorPacket(input.begin(), input.end());
@@ -273,7 +317,7 @@ int main() {
   cout << "Part 1 answer: " << outer_packet->SumPacketAndSubPacketVersions() << endl;
 
   // Part 2:
-  // TODO
+  cout << "Part 2 answer: " << outer_packet->GetValue() << endl;
 
   // Free all memory used
   delete outer_packet; // this will recursively clean up all contained sub-packets
