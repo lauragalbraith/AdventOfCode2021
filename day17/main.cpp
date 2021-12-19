@@ -1,7 +1,7 @@
 // main.cpp: Laura Galbraith
 // Description: solver for Puzzles 1 and 2 of Day 17 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
-// Part 1: TODO
+// Part 1: What is the highest y position it reaches on this trajectory?
 // Part 2: TODO
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
@@ -13,7 +13,6 @@
 using namespace std;
 
 int main() {
-
   pair<vector<string>, int> file_results = ReadLinesFromFile("day17/input.txt");
   if (file_results.second < 0) {
     cout << "Failed to read file" << endl;
