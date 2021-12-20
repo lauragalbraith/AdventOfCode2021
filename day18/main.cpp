@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 18 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: What is the magnitude of the final sum?
-// Part 2: TODO
+// Part 2: What is the largest magnitude of any sum of two different snailfish numbers from the homework assignment?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -12,8 +12,6 @@
 #include <cmath>
 
 using namespace std;
-
-// TODO FINALLY remove all "cout " debug statements
 
 // SnailfishNumberElement either represents a snailfish number (a pair of elements), or a regular number (a single element)
 class SnailfishNumberElement {
@@ -32,6 +30,27 @@ class SnailfishNumberElement {
 
     SnailfishNumberElement(SnailfishNumberElement* p): value(DEFAULT_VALUE), parent(p), left(NULL), right(NULL) {}
     SnailfishNumberElement(SnailfishNumberElement* p, const int& val): value(val), parent(p), left(NULL), right(NULL) {}
+    SnailfishNumberElement(const SnailfishNumberElement& orig) {
+      this->value = orig.value;
+
+      if (orig.left == NULL) {
+        this->left = NULL;
+      }
+      else {
+        this->left = new SnailfishNumberElement(*(orig.left)); // copy left recursively
+        this->left->parent = this;
+      }
+
+      if (orig.right == NULL) {
+        this->right = NULL;
+      }
+      else {
+        this->right = new SnailfishNumberElement(*(orig.right)); // copy right recursively
+        this->right->parent = this;
+      }
+
+      this->parent = orig.parent; // until we are told differently, our parent is the same as the original
+    }
     
     static SnailfishNumberElement* ParseFromText(SnailfishNumberElement* parent, string::const_iterator start, string::const_iterator end);
     int GetValue() { return this->value; }
@@ -158,9 +177,6 @@ void SnailfishNumberElement::Reduce() {
     // Check if any pair is eligible to explode (stop at the leftmost such pair)
     pair<int,SnailfishNumberElement*> explode_candidate = this->MaxPairDepth();
     if (explode_candidate.first >= 4) {
-      // cout << "Got an explode candidate with depth " << explode_candidate.first << " and value ";
-      // explode_candidate.second->Print();
-      // cout << endl;
       // Add the exploding pair's left value to the first regular number to its left
       int l_val = explode_candidate.second->GetLeftElement()->GetValue();
 
@@ -240,7 +256,6 @@ void SnailfishNumberElement::Reduce() {
     // Check if any regular number needs to split (stop at the leftmost such number)
     SnailfishNumberElement* number_to_split = this->GetLeftMostSplitCandidate();
     if (number_to_split != NULL) {
-      // cout << "Got a split candidate: " << number_to_split.GetValue() << endl;
       number_to_split->Split();
       split_performed = true;
     }
@@ -270,10 +285,7 @@ int main() {
   }
 
   // Part 1:
-  SnailfishNumberElement* result = numbers_to_add[0];
-  // cout << "Initial element: ";
-  // result->Print();
-  // cout << endl;
+  SnailfishNumberElement* result = new SnailfishNumberElement(*(numbers_to_add[0]));
   
   for (int i = 1; i < numbers_to_add.size(); ++i) {
     // Create added result; connect elements of new result, and update their parent values
@@ -282,28 +294,53 @@ int main() {
     added->SetLeftElement(result);
     result->SetParent(added);
 
-    added->SetRightElement(numbers_to_add[i]);
-    numbers_to_add[i]->SetParent(added);
-
-    // cout << "Result after addition, before reduction, in step " << i << ": ";
-    // added->Print();
-    // cout << endl;
+    SnailfishNumberElement* copy_right = new SnailfishNumberElement(*(numbers_to_add[i]));
+    added->SetRightElement(copy_right);
+    copy_right->SetParent(added);
 
     // Take reduce actions after the addition, then update the result pointer
     added->Reduce();
     result = added;
-
-    // cout << "Result after step " << i << ": ";
-    // result->Print();
-    // cout << endl;
   }
 
   cout << "Part 1 answer: " << result->Magnitude() << endl;
+  delete result;
 
   // Part 2:
-  // TODO
+  long long int max_magnitude = 0;
+  for (int l = 0; l < numbers_to_add.size(); ++l) {
+    for (int r = 0; r < numbers_to_add.size(); ++r) {
+      if (l == r) { continue; } // the same number added to itself is not a candidate for the result
 
-  delete result;
+      // Create added result; connect elements of new result, and update their parent values
+      SnailfishNumberElement* result = new SnailfishNumberElement(NULL);
+      SnailfishNumberElement* copy_left = new SnailfishNumberElement(*(numbers_to_add[l]));
+      SnailfishNumberElement* copy_right = new SnailfishNumberElement(*(numbers_to_add[r]));
+
+      result->SetLeftElement(copy_left);
+      copy_left->SetParent(result);
+
+      result->SetRightElement(copy_right);
+      copy_right->SetParent(result);
+
+      // Take reduce actions after the addition
+      result->Reduce();
+
+      // Compute magnitude to see if it's the greatest so far
+      long long int magnitude = result->Magnitude();
+      if (magnitude > max_magnitude) { max_magnitude = magnitude; }
+
+      // Clean up memory
+      delete result;
+    }
+  }
+
+  cout << "Part 2 answer: " << max_magnitude << endl;
+
+  // Clean up memory
+  for (auto s:numbers_to_add) {
+    delete s;
+  }
 
   return 0;
 }
