@@ -32,7 +32,7 @@ pair<vector<int>, int> ParseSeparatedInts(const string str, const string sep) {
   pair<vector<int>, int> results(vector<int>(), -1);
   string remaining_str = str;
   smatch m;
-  string regex_str = "(\\d+)" + sep;
+  string regex_str = "([-]{0,1}\\d+)" + sep;
   regex r(regex_str);
   while (regex_search(remaining_str, m, r)) {
     if (m.size() != 2) {
