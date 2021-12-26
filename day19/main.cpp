@@ -2,16 +2,16 @@
 // Description: solver for Puzzles 1 and 2 of Day 19 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: How many beacons are there?
-// Part 2: TODO
+// Part 2: What is the largest Manhattan distance between any two scanners?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile,ParseSeparatedInts
 #include <iostream>
 #include <tuple>
 #include <vector>
 #include <string>
-#include <regex>
 #include <map>
 #include <queue>
+#include <cmath>
 
 using namespace std;
 
@@ -212,6 +212,9 @@ class CoordinateDistance {
 
       return false;
     }
+    double ManhattanDistance() const {
+      return abs(this->x_diff) + abs(this->y_diff) + abs(this->z_diff);
+    }
 
     ~CoordinateDistance() {} // default destructor works
 };
@@ -231,6 +234,7 @@ ostream& operator<<(ostream& os, const CoordinateDistance& d) {
 class ScannerBeaconSet {
   private:
     vector<Coordinate> beacons;
+    Coordinate scanner;
 
   public:
     ScannerBeaconSet(const vector<Coordinate>& beacon_set) {
@@ -238,9 +242,13 @@ class ScannerBeaconSet {
       for (int i = 0; i < beacon_set.size(); ++i) {
         this->beacons[i] = beacon_set[i];
       }
+
+      this->scanner = Coordinate(0,0,0);
     }
 
+
     const vector<Coordinate>& GetBeacons() const { return this->beacons; }
+    const Coordinate GetScanner() const { return this->scanner; }
     void ApplyTransformation(const rotate_func& rotate, const CoordinateDistance& translate);
 
     ~ScannerBeaconSet() {} // default destructor works fine
@@ -250,17 +258,24 @@ void ScannerBeaconSet::ApplyTransformation(
   const rotate_func& rotate,
   const CoordinateDistance& translate)
 {
+  // Rotate and translate beacons
   for (auto it = this->beacons.begin(); it != this->beacons.end(); ++it) {
     Coordinate transformed_b = rotate(*it);
     transformed_b.Translate(translate);
     *it = transformed_b;
   }
+
+  // Rotate and translate scanner
+  Coordinate transformed_s = rotate(this->scanner);
+  transformed_s.Translate(translate);
+  this->scanner = transformed_s;
 }
 
 class Universe {
   private:
     // maps a beacon in the Universe to its distance to every other beacon in the Universe
     map<Coordinate, map<CoordinateDistance,Coordinate>> beacon_graph;
+    vector<Coordinate> scanners;
 
   public:
     Universe(ScannerBeaconSet* scanner_set);
@@ -304,6 +319,7 @@ class Universe {
       return ret;
     }
     int BeaconCount() const { return this->beacon_graph.size(); }
+    const vector<Coordinate>& GetScanners() const { return this->scanners; }
     int DistanceMatchCount(const Coordinate& space_beacon, const map<CoordinateDistance,Coordinate>& other_distances) const;
     void Print() const;
     void Merge(const ScannerBeaconSet* to_merge);
@@ -333,6 +349,9 @@ map<Coordinate, map<CoordinateDistance,Coordinate>> CreateCompleteDistanceGraphF
 
 Universe::Universe(ScannerBeaconSet* scanner_set) {
   this->beacon_graph = CreateCompleteDistanceGraphFromNodes(scanner_set->GetBeacons());
+
+  this->scanners.resize(1);
+  this->scanners[0] = scanner_set->GetScanner();
 }
 
 // DistanceMatchCount returns the number of CoordinateDistance keys that are in other_distances as well as the universe's beacon graph at the specified universe beacon
@@ -380,7 +399,11 @@ void Universe::Merge(const ScannerBeaconSet* to_merge) {
   all_beacons.insert(all_beacons.end(), to_merge->GetBeacons().cbegin(), to_merge->GetBeacons().cend());
 
   // Re-compute the complete graph
+  // TODO optimization: only compute distances for new values in old beacons
   this->beacon_graph = CreateCompleteDistanceGraphFromNodes(all_beacons);
+
+  // Incorporate scanner set's scanner coordinate
+  this->scanners.push_back(to_merge->GetScanner());
 }
 
 // FindTransformationForOverlap determines if there are 12+ overlapping beacons between the given set and universe
@@ -425,7 +448,6 @@ int main() {
   }
 
   // Parse file input:
-  // regex scanner_num_rgx("--- scanner (\\d+) ---"); // TODO FINALLY remove if unused
   queue<ScannerBeaconSet*> unmerged_scanners;
 
   // parse the scanners as unmerged beacon sets
@@ -435,14 +457,6 @@ int main() {
       ++line; // move past the blank line before scanner x beacons
     }
 
-    // parse the scanner number - TODO Part 2 determine if I really need this
-    // smatch m;
-    // regex_search(*line, m, scanner_num_rgx);
-    // if (m.size() != 2) {
-    //   cout << "Unexpected scanner line format: " << *line << endl;
-    //   return -1;
-    // }
-    // int scanner_num = stoi(m[1]);
     ++line; // move past the scanner number line
 
     vector<Coordinate> scanner_beacons;
@@ -508,12 +522,27 @@ int main() {
 
   cout << "Part 1 answer: " << full_space->BeaconCount() << endl;
 
+  // Part 2:
+  vector<Coordinate> final_scanners = full_space->GetScanners();
+
+  double max_distance = 0;
+  for (auto a:final_scanners) {
+    for (auto b:final_scanners) {
+      if (a == b) { continue; } // no need to compute distance to self
+
+      CoordinateDistance diff(a, b);
+      double distance = diff.ManhattanDistance();
+      if (distance > max_distance) {
+        max_distance = distance;
+      }
+    }
+  }
+
+  cout << "Part 2 answer: " << max_distance << endl;
+
   // Clean up memory
   delete full_space;
   // scanner sets have been cleaned up by processing
-
-  // Part 2:
-  // TODO
 
   return 0;
 }
