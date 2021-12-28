@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 20 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: Applying the image enhancement algorithm twice, how many pixels are lit in the resulting image?
-// Part 2: TODO
+// Part 2: Applying the image enhancement algorithm 50 times, how many pixels are lit in the resulting image?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -221,7 +221,7 @@ int main() {
   Image* image_state = new Image(initial_input_image);
 
   // Part 1:
-  for (int application = 0; application < 2; ++application) {
+  for (int application = 1; application <= 2; ++application) {
     // Apply image enhancement algorithm
     image_state->Enhance(image_enhancement_algorithm);
   }
@@ -229,7 +229,12 @@ int main() {
   cout << "Part 1 answer: " << image_state->LitPixels() << endl;
 
   // Part 2:
-  // TODO
+  for (int application = 3; application <= 50; ++application) {
+    // Apply image enhancement algorithm
+    image_state->Enhance(image_enhancement_algorithm);
+  }
+
+  cout << "Part 2 answer: " << image_state->LitPixels() << endl;
 
   // Clean up memory
   delete image_state;
