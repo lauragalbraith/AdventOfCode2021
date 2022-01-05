@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 23 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: What is the least energy required to organize the amphipods?
-// Part 2: TODO
+// Part 2: Using the initial configuration from the full diagram, what is the least energy required to organize the amphipods?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -14,7 +14,6 @@
 #include <map>
 #include <stack>
 #include <queue>
-// TODO FINALLY remove debugging statements
 
 using namespace std;
 
@@ -29,7 +28,6 @@ class Amphipod {
         throw invalid_argument("invalid amphipod type to copy");
       }
 
-      // cout << "this type is " << this->type << "; other type is " << other.type << endl;
       this->type = other.type;
     }
 
@@ -65,7 +63,6 @@ class Amphipod {
 
     // Assignment operator
     Amphipod& operator=(const Amphipod& other) {
-      // cout << "in amphipod assignment operator" << endl;
       if (this != &other) {
         this->copy(other);
       }
@@ -83,20 +80,18 @@ ostream& operator<<(ostream& os, const Amphipod& x) {
 }
 
 Amphipod::Amphipod(const Amphipod& other) {
-  // cout << "this: " << this << ": copy constructor on " << &other << endl;
   this->copy(other);
 }
 
 class BurrowState {
-  public:
-    static const int ROOM_DEPTH = 2;
-
   private:
     vector<pair<Amphipod,bool>> hallway; // bool is true if space is occupied
     // maps the desired amphipod type for a room to what hallway index leads into the room, and what index the room is in "rooms"
     map<AmphipodType,pair<int,int>> type_hallway_room_indexes;
+    int room_depth;
     vector<stack<Amphipod>> rooms;
 
+    // GetAmphipodsInRoom returns a list of all amphipods in the room with the given index, ordered from top to bottom
     const vector<Amphipod> GetAmphipodsInRoom(const int& room_idx) const {
       vector<Amphipod> list;
       stack<Amphipod> room_copy(rooms[room_idx]);
@@ -126,7 +121,6 @@ class BurrowState {
       vector<int> valid_hallway_positions;
 
       // Check to the left of the current position
-      // cout << "Checking valid hallway moves to the left of " << hallway_idx << ": " << endl;
       for (int h = hallway_idx-1; h >= 0; --h) {
         // can't move past another amphipod in the hallway
         if (this->hallway[h].second) {
@@ -141,7 +135,6 @@ class BurrowState {
             break;
           }
         }
-        // cout << h << " is outside of room? " << h_outside_room << endl;start
         if (h_outside_room) {
           continue;
         }
@@ -198,7 +191,7 @@ class BurrowState {
 
       for (int r = 0; r < this->rooms.size(); ++r) {
         vector<Amphipod> room_contents = this->GetAmphipodsInRoom(r);
-        for (int i = 0; i < BurrowState::ROOM_DEPTH; ++i) {
+        for (int i = 0; i < this->room_depth; ++i) {
           if (i < room_contents.size()) {
             hash += ((unsigned long long int)(room_contents[i].GetType()) + 1) * (unsigned long long int)pow((double)AMPHIPOD_SIZE+1, exp);
           }
@@ -226,7 +219,6 @@ class BurrowState {
       // Copy hallway
       this->hallway.resize(other.hallway.size());
       for (int h = 0; h < other.hallway.size(); ++h) {
-        // cout << "copying an amphipod line 201 from " << &other << " from hallway position " << h << endl;
         this->hallway[h] = other.hallway[h];
       }
 
@@ -234,6 +226,9 @@ class BurrowState {
       for (auto t:other.type_hallway_room_indexes) {
         this->type_hallway_room_indexes[t.first] = pair<int,int>(t.second.first, t.second.second);
       }
+
+      // Copy room depth
+      this->room_depth = other.room_depth;
 
       // Copy rooms
       this->rooms.resize(other.rooms.size());
@@ -245,16 +240,23 @@ class BurrowState {
     
   public:
     // Default constructor for easy map operator[] usage; does not produce valid state
-    BurrowState() {}
+    BurrowState(): room_depth(-1) {}
 
     // Initialization constructor from input text
+    // assumes burrow is represented with buffering lines/characters, with all amphipods starting in rooms; example:
+    // #############
+    // #...........#
+    // ###B#A#A#D###
+    //   #D#C#B#A#
+    //   #D#B#A#C#
+    //   #D#C#B#C#
+    //   #########
     BurrowState(const vector<string>& input_lines) {
       for (int line = input_lines.size()-1; line >= 0; --line) {
         int room_idx = 0;
         for (int line_idx = 0; line_idx < input_lines[line].size(); ++line_idx) {
           switch(input_lines[line][line_idx]) {
             case '.': {
-              // cout << "creating hallway space from line index " << line_idx << endl;
               this->hallway.push_back(pair<Amphipod,bool>(Amphipod(), false));
               break;
             }
@@ -262,22 +264,22 @@ class BurrowState {
             case 'B':
             case 'C':
             case 'D': {
-              // cout << "creating amphipod in room " << room_idx << " from line index " << line_idx << ": " << input_lines[line][line_idx] << endl;
               Amphipod amphipod(input_lines[line][line_idx]);
               if (rooms.size() <= room_idx) {
-                // cout << "creating room " << room_idx << " stack" << endl;
                 rooms.push_back(stack<Amphipod>());
               }
               rooms[room_idx].push(amphipod);
-              // cout << "room " << room_idx << " is now " << rooms[room_idx].size() << " elements" << endl;
 
-              type_hallway_room_indexes[static_cast<AmphipodType>(room_idx)] = pair<int,int>(line_idx-1, room_idx); // relies on there being exactly 1 # before the hallway starts
+              type_hallway_room_indexes[static_cast<AmphipodType>(room_idx)] = pair<int,int>(line_idx-1, room_idx); // relies on there being exactly 1 # in the input line before the hallway starts
               ++room_idx;
               break;
             }
           }
         }
       }
+
+      // calculate room depth
+      this->room_depth = this->rooms[0].size();
     }
 
     // true copy constructor
@@ -298,7 +300,7 @@ class BurrowState {
 
       // Calculate energy
       // move outside the room
-      int spaces_moved = BurrowState::ROOM_DEPTH - b.rooms[room_idx].size();
+      int spaces_moved = b.room_depth - b.rooms[room_idx].size();
       // move from outside the room to the hallway position
       for (auto t:b.type_hallway_room_indexes) {
         if (t.second.second == room_idx) {
@@ -326,7 +328,7 @@ class BurrowState {
       // move to the space outside the room
       int spaces_moved = (int)abs(hallway_idx - b.type_hallway_room_indexes[a.GetType()].first);
       // move into the room
-      spaces_moved += BurrowState::ROOM_DEPTH - b.rooms[correct_room_idx].size() + 1;
+      spaces_moved += b.room_depth - b.rooms[correct_room_idx].size() + 1;
 
       int energy_change = spaces_moved * a.EnergyPerStep();
       return pair<BurrowState,int>(b, energy_change);
@@ -355,7 +357,7 @@ class BurrowState {
     // defined for ease of printing
     void Print(ostream& os) const {
       os << "Hallway hash: " << this->HallwayHash() << "; room hash: " << this->RoomHash() << endl;
-      for (int line = 0; line <= BurrowState::ROOM_DEPTH; ++line) {
+      for (int line = 0; line <= this->room_depth; ++line) {
         for (int h = 0; h < this->hallway.size(); ++h) {
           // Print hallway itself
           if (line == 0) {
@@ -398,7 +400,6 @@ class BurrowState {
       for (double h = 0; h < this->hallway.size(); ++h) {
         pair<Amphipod,bool> a = this->hallway[h];
         if (a.second) {
-          // cout << "line 349 type " << a.first.GetType() << endl;
           double distance_into_room = abs(h - this->type_hallway_room_indexes.at(a.first.GetType()).first) + 1.0;
 
           min_energy_needed += distance_into_room * a.first.EnergyPerStep();
@@ -415,10 +416,10 @@ class BurrowState {
         vector<Amphipod> room_list = this->GetAmphipodsInRoom(this_room_idx);
         for (auto a:room_list) {
           if (a.GetType() != correct_room_type) {
-            // cout << "line 366 list of length " << room_list.size() << " has element with type " << a.GetType() << endl;
-            double distance_into_correct_room = 1.0 + abs(this_room_hallway_idx - this->type_hallway_room_indexes.at(a.GetType()).first) + 1.0;
+            // does not account for depth moving out of the room, just moving 1 space into the hallway, moving 1 space into the room
+            double min_dist_into_correct_room = 1.0 + abs(this_room_hallway_idx - this->type_hallway_room_indexes.at(a.GetType()).first) + 1.0;
 
-            min_energy_needed += distance_into_correct_room * a.EnergyPerStep();
+            min_energy_needed += min_dist_into_correct_room * a.EnergyPerStep();
           }
         }
       }
@@ -452,10 +453,8 @@ class BurrowState {
       // Do not consider rooms that are already getting filled up with their correct occupants
       for (auto t:this->type_hallway_room_indexes) {
         if (!this->IsRoomCorrectlyOccupied(t.second.second) && this->rooms[t.second.second].size() > 0) {
-          // cout << "Considering amphipod at the top of room " << t.second.second << endl;
           vector<int> new_positions = this->GetValidHallwayMoves(t.second.first);
           for (auto p:new_positions) {
-            // cout << "creating neighbor: top amphipod can move from room " << t.second.second << " to hallway position " << p << endl;
             pair<BurrowState,int> new_state = this->CreateTransitionToHallway(t.second.second, p);
             adjacent_transitions.push_back(new_state);
           }
@@ -466,39 +465,31 @@ class BurrowState {
       for (int h = 0; h < this->hallway.size(); ++h) {
         pair<Amphipod,bool> a = this->hallway[h];
         if (a.second) {
-          // cout << "considering moving " << a.first << " in hallway position " << h << endl;
 
           // The room must contain only correct types before we can enter it
           int correct_room_idx = this->type_hallway_room_indexes.at(a.first.GetType()).second;
           bool all_correct = this->IsRoomCorrectlyOccupied(correct_room_idx);
-          // cout << "all correct in the goal room index " << correct_room_idx << "? want " << true << ": " << all_correct << endl;
 
           // Ensure the hallway is empty on our way to our room
           int correct_room_entrance = this->type_hallway_room_indexes.at(a.first.GetType()).first;
           int path_min = h < correct_room_entrance ? h+1 : correct_room_entrance;
           int path_max = path_min == correct_room_entrance ? h-1 : correct_room_entrance;
-          // cout << "checking path between " << path_min << " and " << path_max << " on way to room entrance " << correct_room_entrance << endl;
 
           bool path_empty = true; // until proven false
           for (int path_h = path_min; path_h <= path_max; ++path_h) {
             if (this->hallway[path_h].second) {
-              // cout << "path blocked by " << this->hallway[path_h].first << " in index " << path_h << endl;
               path_empty = false;
               break;
             }
           }
-          // cout << "path empty? want " << true << ": " << path_empty << endl;
 
           if (all_correct && path_empty) {
-            // cout << "Creating neighbor; amphipod can move from hallway position " << h << " to its correct room" << endl;
-
             pair<BurrowState,int> new_state = this->CreateTransitionFromHallway(h);
             adjacent_transitions.push_back(new_state);
           }
         }
       }
 
-      // cout << "returning " << adjacent_transitions.size() << " adjacent states" << endl;
       return adjacent_transitions;
     }
 
@@ -540,22 +531,13 @@ class EnergyGuessComparison {
     }
 };
 
-int main() {
-  pair<vector<string>, int> file_results = ReadLinesFromFile("day23/input.txt");
-  if (file_results.second < 0) {
-    cout << "Failed to read file" << endl;
-    return -1;
-  }
-
-  // Parse file input
-  BurrowState start(file_results.first);
-
-  // Part 1:
+// LeastEnergyToOrganize returns the least energy needed to organize the given burrow
+// returns a negative number if we fail to find a way to organize the burrow
+int LeastEnergyToOrganize(BurrowState& start) {
   // Follow A* algorithm, treating burrow states as nodes; developed referencing https://en.wikipedia.org/wiki/A*_search_algorithm#Pseudocode
   priority_queue<EnergyGuessForBurrowState, vector<EnergyGuessForBurrowState>, EnergyGuessComparison> state_queue;
   EnergyGuessForBurrowState start_guess(start, start.EnergyNeededHeuristic());
   state_queue.push(start_guess);
-  // cout << "Start state:" << start << endl;
 
   // Create map tracking the directionality of the lowest energy path from start
   map<BurrowState,BurrowState> came_from;
@@ -565,29 +547,20 @@ int main() {
   lowest_energy_needed[start] = 0;
 
   while (!state_queue.empty()) {
-    // cout << "Taking another state off the top of priority queue with " << state_queue.size() << " states total in it" << endl;
     EnergyGuessForBurrowState current = state_queue.top();
     state_queue.pop();
 
-    // cout << "Looking for a good move from:" << current.burrow_state << endl;
-
     // Check if we've reached the goal burrow state
     if (current.burrow_state.IsOrganized()) {
-      cout << "Part 1 answer: " << lowest_energy_needed[current.burrow_state] << endl;
-      break;
+      return lowest_energy_needed[current.burrow_state];
     }
 
     // Consider each move that the amphipods in the burrow could make to an adjacent state
     vector<pair<BurrowState,int>> transitions = current.burrow_state.GetValidAdjacentStates();
-    // cout << transitions.size() << " valid transitions found" << endl;
     for (auto t:transitions) {
       int tentative_energy_needed = lowest_energy_needed[current.burrow_state] + t.second;
-      // cout << "Potential next move: " << t.first << endl;
 
       if (lowest_energy_needed.find(t.first) == lowest_energy_needed.end() || tentative_energy_needed < lowest_energy_needed[t.first]) {
-        // TODO Part 2: if same algorithm is not working to solve Part 2, it's possible that the heuristic still is not consistent; in solving Part 1, there were points where the lowest-energy-seen decreased (lowest_energy_needed.find(t.first) != lowest_energy_needed.end()), so if they were to be pulled off the queue a second time, they would have to be detected and squashed
-
-        // cout << "Good next move: " << t.first << endl;
         // This move is the shortest-known path from the start through current
         came_from[t.first] = current.burrow_state;
         lowest_energy_needed[t.first] = tentative_energy_needed;
@@ -596,16 +569,31 @@ int main() {
         state_queue.push(adjacent_guess);
       }
     }
-    // cout << endl;
   }
 
+  return -1;
+}
+
+int main() {
+  // Part 1:
+  pair<vector<string>, int> file_results = ReadLinesFromFile("day23/input.txt");
+  if (file_results.second < 0) {
+    cout << "Failed to read file" << endl;
+    return -1;
+  }
+
+  BurrowState start(file_results.first);
+  cout << "Part 1 answer: " << LeastEnergyToOrganize(start) << endl << endl;
+
   // Part 2:
-  /* TODO ideas:
-    because an amphipod will only move twice (once to the hallway, once to its room), it will only have 1 mystery point to go to -> 1 variable per amphipod in the burrow
-    There are only a very small number of feasible stop options in the hallway
-    every amphipod has a minimum movement = minimum energy to move to its final destination; so the solution is minimizing the additional steps outside of that path
-    If Part 2 is some of the rules for movement change, I could encapsulate the edge-determination in a function & replace the function
-  */
+  pair<vector<string>, int> file_results2 = ReadLinesFromFile("day23/input_part2.txt");
+  if (file_results2.second < 0) {
+    cout << "Failed to read file" << endl;
+    return -1;
+  }
+
+  BurrowState start2(file_results2.first);
+  cout << "Part 2 answer: " << LeastEnergyToOrganize(start2) << endl;
 
   return 0;
 }
