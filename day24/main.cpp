@@ -11,16 +11,17 @@
 #include <string>
 #include <queue>
 #include <cmath>
-// TODO FINALLY evaluate which imports are needed
 #include <regex>
 #include <stdexcept>
 
 using namespace std;
 
-// TODO FINALLY remove unused code
+// TODO FINALLY remove unused code (consider: instruction commands I've rendered obselete)
+// TODO FINALLY remove debugging statements
+// TODO FINALLY evaluate which imports are needed
 
 // Define ALU operations
-typedef void (*alu_instruction)(long long int& a, const long long int b);
+typedef void (*instruction_cmd)(long long int& a, const long long int b);
 
 void Input(long long int& a, const long long int b) { a = b; }
 
@@ -46,7 +47,7 @@ void Divide(long long int& a, const long long int b) {
 
 void Modulo(long long int& a, const long long int b) { a = a % b; }
 
-void Equals(long long int& a, const long long int b) { a = a == b ? 1 : 0; }
+void NotEquals(long long int& a, const long long int b) { a = a != b ? 1 : 0; }
 
 // Define types/enums to make it easier to determine which variable(s) are being manipulated
 enum ALUVariable { w=0, x=1, y=2, z=3, VARIABLE_COUNT=4 };
@@ -63,7 +64,76 @@ ALUVariable FromInstructionChar(const char& c) {
   }
 }
 
+class Instruction {
+  private:
+    ALUVariable arg2;
+    bool arg2_literal_defined;
+    long long int arg2_literal;
+
+  public:
+    string command;
+    ALUVariable arg1;
+
+    Instruction(const string& line) {
+      smatch m;
+      regex_search(line, m, regex("^([a-z]{3}) ([a-z])( ([a-z0-9-]+)){0,1}"));
+      if (m.size() != 5) {
+        throw invalid_argument("unexpected line format");
+      }
+
+      // parse command from instruction
+      this->command = m[1];
+
+      // parse first argument to the instruction
+      this->arg1 = FromInstructionChar(m.str(2)[0]);
+
+      // parse second argument to the instruction
+      this->arg2 = VARIABLE_COUNT;
+      this->arg2_literal_defined = false;
+
+      if (m[4] != "") {
+        this->arg2 = FromInstructionChar(m.str(4)[0]);
+        if (this->arg2 == VARIABLE_COUNT) {
+          this->arg2_literal_defined = true;
+          this->arg2_literal = stoi(m[4]);
+        }
+      }
+    }
+
+    // Assignment operator
+    Instruction& operator=(const Instruction& other) {
+      if (this != &other) {
+        this->command = other.command;
+        this->arg1 = other.arg1;
+        this->arg2 = other.arg2;
+        this->arg2_literal_defined = other.arg2_literal_defined;
+        this->arg2_literal = other.arg2_literal;
+      }
+
+      return *this;
+    }
+
+    ALUVariable GetSecondArgumentVariable() const {
+      return this->arg2;
+    }
+
+    pair<long long int,bool> GetSecondArgumentLiteral() const {
+      return pair<long long int,bool>(this->arg2_literal, this->arg2_literal_defined);
+    }
+};
+
+// GetNextInstructionLine returns the next instruction line after curr, skipping any lines that start with "#"
+int GetNextInstructionLine(const vector<string>& lines, const int curr) {
+  int next = curr + 1;
+  while (next < lines.size() && lines[next][0] == '#') {
+    ++next;
+  }
+
+  return next;
+}
+
 constexpr long long int possible_input_digits[9] = {1,2,3,4,5,6,7,8,9};
+const long long int max_digit = possible_input_digits[8];
 
 class ALUState {
   private:
@@ -131,7 +201,7 @@ class ALUState {
 
     // Perform instruction on a single variable
     // Returns a list of possible ALU states reached by taking input into this ALU state's variable (indicated by a_var)
-    vector<ALUState> PerformInstruction(alu_instruction instrct, const ALUVariable a_var) {
+    vector<ALUState> PerformInstruction(instruction_cmd instrct, const ALUVariable a_var) {
       // Since the only single-input instruction is Input, implement that branching logic
       vector<ALUState> all_possible_states;
       for (int i = 0; i < sizeof(possible_input_digits)/sizeof(possible_input_digits[0]); ++i) {
@@ -147,14 +217,14 @@ class ALUState {
     }
 
     // Perform instruction on two variables
-    vector<ALUState> PerformInstruction(alu_instruction instrct, const ALUVariable a_var, const ALUVariable b_var) {
+    vector<ALUState> PerformInstruction(instruction_cmd instrct, const ALUVariable a_var, const ALUVariable b_var) {
       (*instrct)(this->variables[a_var], this->variables[b_var]);
 
       return vector<ALUState>(1, *this);
     }
 
     // Perform instruction on one variables and a literal
-    vector<ALUState> PerformInstruction(alu_instruction instrct, const ALUVariable a_var, const long long int b_literal) {
+    vector<ALUState> PerformInstruction(instruction_cmd instrct, const ALUVariable a_var, const long long int b_literal) {
       (*instrct)(this->variables[a_var], b_literal);
 
       return vector<ALUState>(1, *this);
@@ -186,8 +256,29 @@ unsigned long long int ConvertDigitListToNumber(const vector<unsigned int>& list
   return result;
 }
 
+// Values determined by studying input.txt
+const long long int z_multiplier = 26;
+const string z_divider_instruction = "div z " + to_string(z_multiplier);
+const long long int max_addition = 15;
+
+// If a state's z value gets bigger than can be divided down to zero, we know it will not be valid
+// by studying input.txt, we notice that z is always of the form  26*(26*...26*(digitX + literal-from-file) + digitZ + literal-from-file)... ) ... + digitY + literal-from-file
+// where MAX(literal-from-file) is 15
+long long int ComputeMaximumMultipliedZValue(const long long int z_dividers_remaining) {
+  if (z_dividers_remaining == 0) {
+    return 0;
+  }
+  else if (z_dividers_remaining == 1) {
+    return max_digit + max_addition;
+  }
+  else {
+    return z_multiplier * ComputeMaximumMultipliedZValue(z_dividers_remaining-1) + max_digit + max_addition;
+  }
+}
+
 int main() {
-  pair<vector<string>, int> file_results = ReadLinesFromFile("day24/input.txt");
+  // The original input.txt was studied and modified to reduce instructions to speed up code; see explanatory comments in the file
+  pair<vector<string>, int> file_results = ReadLinesFromFile("day24/input-modified.txt");
   if (file_results.second < 0) {
     cout << "Failed to read file" << endl;
     return -1;
@@ -195,96 +286,114 @@ int main() {
 
   // Part 1:
 
+  // Pre-process instructions to more efficiently determine acceptable model numbers
+  vector<string> instructions;
+  long long int z_dividers_remaining = 0;
+  for (auto line:file_results.first) {
+    // Count the number of times the defining z-divider instruction appears
+    if (line == z_divider_instruction) {
+      ++z_dividers_remaining;
+    }
+  }
+
+  long long int max_possibly_valid_z_value = ComputeMaximumMultipliedZValue(z_dividers_remaining);
+  // cout << "Max possible z value starts as " << max_possibly_valid_z_value << " with " << z_dividers_remaining << " divider instructions remaining" << endl;
+
   // Create initial possible ALU state
   ALUState initial = ALUState();
-  map<ALUState, vector<unsigned int>>* maxed_possible_states = new map<ALUState, vector<unsigned int>>(); // value of this map is the greatest possible series of inputs to get to the state
-  (*maxed_possible_states)[initial] = vector<unsigned int>();
+  map<ALUState, vector<unsigned int>> maxed_possible_states; // value of this map is the greatest possible series of inputs to get to the state
+  maxed_possible_states[initial] = vector<unsigned int>();
 
   // Process each instruction on all possible ALU states, given input possibilities
-  regex instruction_rgx("^([a-z]{3}) ([a-z])( ([a-z0-9-]+)){0,1}");
-  for (int l = 0; l < file_results.first.size(); ++l) {
-    cout << "Performing instruction " << l << ": " << file_results.first[l] << endl; 
-    smatch m;
-    regex_search(file_results.first[l], m, instruction_rgx);
-    if (m.size() != 5) {
-      cout << "unexpected line format: " << file_results.first[l] << endl;
-      return -1;
-    }
+  for (int l = GetNextInstructionLine(file_results.first, -1); l < file_results.first.size(); l = GetNextInstructionLine(file_results.first, l)) {
+    // cout << "Performing instruction " << l << ": " << file_results.first[l] << endl;
+    Instruction i(file_results.first[l]);
 
-    // Parse file input: parse first argument to the instruction
-    ALUVariable arg1 = FromInstructionChar(m.str(2)[0]);
-
-    // Parse file input: parse second argument to the instruction
-    ALUVariable arg2 = VARIABLE_COUNT;
-    bool arg2_literal_defined = false;
-    int arg2_literal;
-
-    if (m[4] != "") {
-      arg2 = FromInstructionChar(m.str(4)[0]);
-      if (arg2 == VARIABLE_COUNT) {
-        arg2_literal_defined = true;
-        arg2_literal = stoi(m[4]);
-      }
+    // Parse file input: parse command from instruction
+    instruction_cmd cmd_func;
+    if (i.command == "inp") {
+      cmd_func = &Input;
     }
-
-    // Parse file input: parse instruction
-    alu_instruction instruction;
-    // cout << "Instruction type: " << m[1] << endl;
-    if (m[1] == "inp") {
-      instruction = &Input;
+    else if (i.command == "add") {
+      cmd_func = &Add;
     }
-    else if (m[1] == "add") {
-      instruction = &Add;
-    }
-    else if (m[1] == "mul") {
-      if (arg2_literal_defined && arg2_literal == 1) {
+    else if (i.command == "mul") {
+      if (i.GetSecondArgumentLiteral().second && i.GetSecondArgumentLiteral().first == 1) {
         continue; // skip to next instruction, because multiplying by 1 is a no-op
       }
 
-      instruction = &Multiply;
+      if (i.GetSecondArgumentLiteral().second && i.GetSecondArgumentLiteral().first == 0) {
+        // studying input.txt reveals that when a variable is multiplied by 0, the next instruction is always adding a value to that variable, effectively setting that variable equal to what's specified in the second instruction
+        // Combine those two instructions into a single command: input b into a
+        l = GetNextInstructionLine(file_results.first, l);
+        // cout << "(combining with instruction " << file_results.first[l] << ")" << endl;
+        cmd_func = &Input;
+        Instruction equivalent(file_results.first[l]);
+        i = equivalent;
+      }
+      else {
+        cmd_func = &Multiply;
+      }
     }
-    else if (m[1] == "div") {
-      if (arg2_literal_defined && arg2_literal == 1) {
+    else if (i.command == "div") {
+      if (i.GetSecondArgumentLiteral().second && i.GetSecondArgumentLiteral().first == 1) {
         continue; // skip to next instruction, because dividing by 1 is a no-op
       }
 
-      instruction = &Divide;
+      // update continuous z-divider instruction count as we go
+      if (file_results.first[l] == z_divider_instruction) {
+        --z_dividers_remaining;
+        max_possibly_valid_z_value = ComputeMaximumMultipliedZValue(z_dividers_remaining);
+        // cout << "Max possible z value is now " << max_possibly_valid_z_value << " with " << z_dividers_remaining << " divider instructions remaining" << endl;
+      }
+
+      cmd_func = &Divide;
     }
-    else if (m[1] == "mod") {
-      instruction = &Modulo;
+    else if (i.command == "mod") {
+      cmd_func = &Modulo;
     }
-    else if (m[1] == "eql") {
-      instruction = &Equals;
+    else if (i.command == "eql") {
+      // studying input.txt reveals that all eql instructions come in pairs that equate to a not-equal operation
+      // so we'll skip the next instruction, and now run a not-equals operation
+      l = GetNextInstructionLine(file_results.first, l);
+      // cout << "(combining with instruction " << file_results.first[l] << ")" << endl;
+      cmd_func = &NotEquals;
     }
     else {
-      cout << "Unexpected instruction: " << m[1] << endl;
+      cout << "Unexpected instruction: " << i.command << endl;
       return -1;
     }
 
-    map<ALUState, vector<unsigned int>>* next_maxed_possible_states = new map<ALUState, vector<unsigned int>>();
-    for (auto it = maxed_possible_states->begin(); it != maxed_possible_states->end(); ++it) {
+    map<ALUState, vector<unsigned int>> next_maxed_possible_states;
+    for (auto it = maxed_possible_states.begin(); it != maxed_possible_states.end(); ++it) {
       ALUState current_state = it->first;
       vector<unsigned int> current_input_list = it->second;
       // cout << "Handling current ALU state: " << current_state << endl;
 
       vector<ALUState> next_states;
-      if (arg2 != VARIABLE_COUNT) {
+      if (i.GetSecondArgumentVariable() != VARIABLE_COUNT) {
         // cout << "Processing double-var instruction type..." << endl;
-        next_states = current_state.PerformInstruction(instruction, arg1, arg2);
+        next_states = current_state.PerformInstruction(cmd_func, i.arg1, i.GetSecondArgumentVariable());
       }
-      else if (arg2_literal_defined) {
+      else if (i.GetSecondArgumentLiteral().second) {
         // cout << "Processing one-var one-val instruction type..." << endl;
-        next_states = current_state.PerformInstruction(instruction, arg1, arg2_literal);
+        next_states = current_state.PerformInstruction(cmd_func, i.arg1, i.GetSecondArgumentLiteral().first);
       }
       else {
         // cout << "Processing single-var instruction type..." << endl;
-        next_states = current_state.PerformInstruction(instruction, arg1);
+        next_states = current_state.PerformInstruction(cmd_func, i.arg1);
       }
 
       for (auto state:next_states) {
+        // Determine if this next state has a chance of representing a valid model number before adding it to the tracking map
+        if (state.GetVariableValue(z) > max_possibly_valid_z_value) {
+          // cout << "Rejecting state with z value " << state.GetVariableValue(z) << " as it is too high for the remaining " << z_dividers_remaining << " dividing instructions to reduce" << endl;
+          continue;
+        }
+
         vector<unsigned int> next_input_list(current_input_list);
-        if (m[1] == "inp") {
-          next_input_list.push_back(state.GetVariableValue(arg1));
+        if (i.command == "inp") {
+          next_input_list.push_back(state.GetVariableValue(i.arg1));
         }
 
         // cout << "Next state is: " << state << " with input list:";
@@ -293,15 +402,15 @@ int main() {
         // }
         // cout << endl;
 
-        if (next_maxed_possible_states->find(state) != next_maxed_possible_states->end()) {
+        if (next_maxed_possible_states.find(state) != next_maxed_possible_states.end()) {
           if (l >= 98) {
             // cout << "Evaluating " << state << " already stored in map with input list " << ConvertDigitListToNumber(next_maxed_possible_states[state]) << " against new input list " << ConvertDigitListToNumber(next_input_list) << endl;
           }
 
           // If this next state has already been reached by an already-processed ALU state, then store the input list that represents the greater number
-          if (ConvertDigitListToNumber(next_maxed_possible_states->at(state)) > ConvertDigitListToNumber(next_input_list)) {
+          if (ConvertDigitListToNumber(next_maxed_possible_states.at(state)) > ConvertDigitListToNumber(next_input_list)) {
             // cout << "Using the stored input list" << endl;
-            next_input_list = next_maxed_possible_states->at(state);
+            next_input_list = next_maxed_possible_states.at(state);
           }
         }
         else {
@@ -310,33 +419,27 @@ int main() {
           }
         }
 
-        (*next_maxed_possible_states)[state] = next_input_list;
+        next_maxed_possible_states[state] = next_input_list;
       }
     }
 
     // Move to next possible states for next instruction
-    if (next_maxed_possible_states->size() != maxed_possible_states->size()) {
-      cout << "Now handling " << maxed_possible_states->size() << " states" << endl;
+    if (next_maxed_possible_states.size() != maxed_possible_states.size()) {
+      // cout << "Now handling " << next_maxed_possible_states.size() << " states" << endl;
     }
 
-    delete maxed_possible_states;
     maxed_possible_states = next_maxed_possible_states;
-    // cout << "end of loop" << endl;
   }
 
   // Pen and paper suggested answer 99994469899267, but inevitably missed something, because it's too high
   // TODO IDEAS: rather than compute everything, form strings for what the registers equal, and print out z at the end (can simplify certain instructions this way; mul x 0 means the whole expression gets wiped out and goes to 0); everything else gets prepended with (, appended with ), and then an operator written out, potentially also with () around it
-  // TODO other idea: track multiple possible states like one reddit user did, combining states that are the same when possible
   // TODO idea go thru instructions in reverse order; z must be 0, so "add z y" means z and y are opposite but equal positive/negative numbers; but I don't know how to represent all possibilities for that...
   // TODO idea: try all 1s, all 2s, all 3s, etc. as input and what that gives us; or 12345.... 98765....
-  // TODO HERE idea: if deleting is slow, keep a list of things that need to be deleted, and delete them later! Or figure out another way to only use 1 map the whole time (could include instruction number in ALU state, OR remove element from map as we use it - might have to use a while loop/repeatedly call begin() to get all elements to be handled correctly) - **test how iterating works while you delete; if I can guarantee order, I could insert higher ALU instructions before the current iterator, or just write skip code if state is beyond current instruction
-  // TODO NEXT 1 idea: once z gets above a value so it cannot be divided by 26 out (count this from the input file), refuse to store any ALU states with z above that value limit; better yet, keep a running tally of how many div26 instructions are left, to constantly evaluate if it's worth tracking the state given its z value; could also factor in that "add x/y" instructions are remainders that get added to digit numbers, and that +9 is the max that will ever be in a /26 remainder or added to a 26 product to be valid
-
-  // TODO FINALLY remove debugging statements
+  // TODO idea: if deleting is slow, keep a list of things that need to be deleted, and delete them later! Or figure out another way to only use 1 map the whole time (could include instruction number in ALU state, OR remove element from map as we use it - might have to use a while loop/repeatedly call begin() to get all elements to be handled correctly) - **test how iterating works while you delete; if I can guarantee order, I could insert higher ALU instructions before the current iterator, or just write skip code if state is beyond current instruction
 
   // Determine which valid output has the greatest model number
   unsigned long long int max_model_number = 0;
-  for (auto state:*maxed_possible_states) {
+  for (auto state:maxed_possible_states) {
     if (state.first.GetVariableValue(z) == 0) {
       unsigned long long int valid_model_number = ConvertDigitListToNumber(state.second);
       if (valid_model_number > max_model_number) {
@@ -346,9 +449,6 @@ int main() {
   }
 
   cout << "Part 1 answer: " << max_model_number << endl;
-
-  // Clean up memory
-  delete maxed_possible_states;
 
   // Part 2:
   // TODO

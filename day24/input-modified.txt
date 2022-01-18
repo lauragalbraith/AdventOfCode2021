@@ -1,0 +1,314 @@
+#           .......... NEW DIGIT ..........
+inp w
+# mul x 0   # x is already 0
+# add x z   # adds 0 to 0
+# mod x 26  # 0 mod 26 is 0
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+#           # next 3 lines: 10 cannot equal a single digit, so x is now 1
+# add x 10
+# eql x w
+# eql x 0
+#           # the next 4 lines become z *= 0, so are unnecessary since z starts as 0
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+#           # the next 5 lines become the 6th, 7th, because x=1
+# mul y 0   # unnecessary; y is still 0
+# add y w
+# add y 12
+# mul y x   # unnecessary; x=1
+# add z y
+add z w
+add z 12
+#           .......... NEW DIGIT ..........
+inp w
+#           # next 3 lines, and 3 lines after that amount to x=1 because all numbers are positive so far, but larger than the largest possible digit (9)
+# mul x 0
+# add x z
+# mod x 26
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+# add x 12
+# eql x w
+# eql x 0
+#           # since x=1, next 5 lines amount to the 6th
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+mul z 26
+#           # since x=1, next 5 lines amount to the 6th,7th
+# mul y 0
+# add y w
+# add y 7
+# mul y x
+# add z y
+add z w
+add z 7
+#           .......... NEW DIGIT ..........
+inp w
+#           # next 3 lines, and 3 lines after that amount to x=1 because all numbers are positive so far, but larger than the largest possible digit (9)
+# mul x 0
+# add x z
+# mod x 26
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+# add x 10
+# eql x w
+# eql x 0
+#           # since x=1, next 5 lines amount to the 6th
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+mul z 26
+#           # since x=1, next 5 lines amount to the 6th,7th
+# mul y 0
+# add y w
+# add y 8
+# mul y x
+# add z y
+add z w
+add z 8
+#           .......... NEW DIGIT ..........
+inp w
+#           # next 3 lines, and 3 lines after that amount to x=1 because all numbers are positive so far, but larger than the largest possible digit (9)
+# mul x 0
+# add x z
+# mod x 26
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+# add x 12
+# eql x w
+# eql x 0
+#           # since x=1, next 5 lines amount to the 6th
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+mul z 26
+#           # since x=1, next 5 lines amount to the 6th,7th
+# mul y 0
+# add y w
+# add y 8
+# mul y x
+# add z y
+add z w
+add z 8
+#           .......... NEW DIGIT ..........
+inp w
+#           # next 3 lines, and 3 lines after that amount to x=1 because all numbers are positive so far, but larger than the largest possible digit (9)
+# mul x 0
+# add x z
+# mod x 26
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+# add x 11
+# eql x w
+# eql x 0
+#           # since x=1, next 5 lines amount to the 6th
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+mul z 26
+#           # since x=1, next 5 lines amount to the 6th,7th
+# mul y 0
+# add y w
+# add y 15
+# mul y x
+# add z y
+add z w
+add z 15
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -16
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 12
+mul y x
+add z y
+#           .......... NEW DIGIT ..........
+inp w
+#           # next 3 lines, and 3 lines after that amount to x=1 because all numbers are positive so far, but larger than the largest possible digit (9)
+# mul x 0
+# add x z
+# mod x 26
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+# add x 10
+# eql x w
+# eql x 0
+#           # since x=1, next 5 lines amount to the 6th
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+mul z 26
+#           # since x=1, next 5 lines amount to the 6th,7th
+# mul y 0
+# add y w
+# add y 8
+# mul y x
+# add z y
+add z w
+add z 8
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -11
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 13
+mul y x
+add z y
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -13
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 3
+mul y x
+add z y
+#           .......... NEW DIGIT ..........
+inp w
+#           # next 3 lines, and 3 lines after that amount to x=1 because all numbers are positive so far, but larger than the largest possible digit (9)
+# mul x 0
+# add x z
+# mod x 26
+# div z 1   # all the "div z 1" instructions do nothing, as the variables always hold integers
+# add x 13
+# eql x w
+# eql x 0
+#           # since x=1, next 5 lines amount to the 6th
+# mul y 0
+# add y 25
+# mul y x
+# add y 1
+# mul z y
+mul z 26
+#           # since x=1, next 5 lines amount to the 6th,7th
+# mul y 0
+# add y w
+# add y 13
+# mul y x
+# add z y
+add z w
+add z 13
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -8
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 3
+mul y x
+add z y
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -1
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 9
+mul y x
+add z y
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -4
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 4
+mul y x
+add z y
+#           .......... NEW DIGIT ..........
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+#           # For digits with negative x additives, x is no longer quite as easy to determine, so we can't save time reducing instructions
+add x -14
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 13
+mul y x
+add z y
