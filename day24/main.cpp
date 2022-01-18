@@ -2,14 +2,13 @@
 // Description: solver for Puzzles 1 and 2 of Day 24 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: What is the largest model number accepted by MONAD?
-// Part 2: TODO
+// Part 2: What is the smallest model number accepted by MONAD?
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
 #include <tuple>
 #include <vector>
 #include <string>
-#include <queue>
 #include <cmath>
 #include <regex>
 #include <stdexcept>
@@ -18,7 +17,7 @@ using namespace std;
 
 // TODO FINALLY remove unused code (consider: instruction commands I've rendered obselete)
 // TODO FINALLY remove debugging statements
-// TODO FINALLY evaluate which imports are needed
+// TODO HERE evaluate which imports are needed
 
 // Define ALU operations
 typedef void (*instruction_cmd)(long long int& a, const long long int b);
@@ -247,8 +246,8 @@ ostream& operator<<(ostream& os, const ALUState& c) {
 // ConvertDigitListToNumber returns the represented number
 // ex. if passed {1,2,3}, it will return 123
 // Returns 0 if the list is empty
-unsigned long long int ConvertDigitListToNumber(const vector<unsigned int>& list) {
-  unsigned long long int result = 0;
+long long int ConvertDigitListToNumber(const vector<unsigned int>& list) {
+  long long int result = 0;
   for (auto digit:list) {
     result = result*10 + digit;
   }
@@ -276,38 +275,24 @@ long long int ComputeMaximumMultipliedZValue(const long long int z_dividers_rema
   }
 }
 
-int main() {
-  // The original input.txt was studied and modified to reduce instructions to speed up code; see explanatory comments in the file
-  pair<vector<string>, int> file_results = ReadLinesFromFile("day24/input-modified.txt");
-  if (file_results.second < 0) {
-    cout << "Failed to read file" << endl;
-    return -1;
-  }
+// Since the only difference between Part 1 and Part 2 is max vs min, make comparators to use in each case
+typedef bool (*comparison)(const long long int& a, const long long int& b);
+bool AGreaterThanB(const long long int& a, const long long int& b) { return a > b; }
+bool ALessThanB(const long long int& a, const long long int& b) { return a < b; }
 
-  // Part 1:
-
-  // Pre-process instructions to more efficiently determine acceptable model numbers
-  vector<string> instructions;
-  long long int z_dividers_remaining = 0;
-  for (auto line:file_results.first) {
-    // Count the number of times the defining z-divider instruction appears
-    if (line == z_divider_instruction) {
-      ++z_dividers_remaining;
-    }
-  }
-
+long long int ComputeValidModelNumber(const vector<string>& lines, comparison compare_func, long long int z_dividers_remaining) {
   long long int max_possibly_valid_z_value = ComputeMaximumMultipliedZValue(z_dividers_remaining);
   // cout << "Max possible z value starts as " << max_possibly_valid_z_value << " with " << z_dividers_remaining << " divider instructions remaining" << endl;
-
+  
   // Create initial possible ALU state
   ALUState initial = ALUState();
-  map<ALUState, vector<unsigned int>> maxed_possible_states; // value of this map is the greatest possible series of inputs to get to the state
-  maxed_possible_states[initial] = vector<unsigned int>();
-
+  map<ALUState, vector<unsigned int>> best_possible_states; // value of this map is the greatest possible series of inputs to get to the state
+  best_possible_states[initial] = vector<unsigned int>();
+  
   // Process each instruction on all possible ALU states, given input possibilities
-  for (int l = GetNextInstructionLine(file_results.first, -1); l < file_results.first.size(); l = GetNextInstructionLine(file_results.first, l)) {
-    // cout << "Performing instruction " << l << ": " << file_results.first[l] << endl;
-    Instruction i(file_results.first[l]);
+  for (int l = GetNextInstructionLine(lines, -1); l < lines.size(); l = GetNextInstructionLine(lines, l)) {
+    // cout << "Performing instruction " << l << ": " << lines[l] << endl;
+    Instruction i(lines[l]);
 
     // Parse file input: parse command from instruction
     instruction_cmd cmd_func;
@@ -325,10 +310,10 @@ int main() {
       if (i.GetSecondArgumentLiteral().second && i.GetSecondArgumentLiteral().first == 0) {
         // studying input.txt reveals that when a variable is multiplied by 0, the next instruction is always adding a value to that variable, effectively setting that variable equal to what's specified in the second instruction
         // Combine those two instructions into a single command: input b into a
-        l = GetNextInstructionLine(file_results.first, l);
-        // cout << "(combining with instruction " << file_results.first[l] << ")" << endl;
+        l = GetNextInstructionLine(lines, l);
+        // cout << "(combining with instruction " << lines[l] << ")" << endl;
         cmd_func = &Input;
-        Instruction equivalent(file_results.first[l]);
+        Instruction equivalent(lines[l]);
         i = equivalent;
       }
       else {
@@ -341,7 +326,7 @@ int main() {
       }
 
       // update continuous z-divider instruction count as we go
-      if (file_results.first[l] == z_divider_instruction) {
+      if (lines[l] == z_divider_instruction) {
         --z_dividers_remaining;
         max_possibly_valid_z_value = ComputeMaximumMultipliedZValue(z_dividers_remaining);
         // cout << "Max possible z value is now " << max_possibly_valid_z_value << " with " << z_dividers_remaining << " divider instructions remaining" << endl;
@@ -355,8 +340,8 @@ int main() {
     else if (i.command == "eql") {
       // studying input.txt reveals that all eql instructions come in pairs that equate to a not-equal operation
       // so we'll skip the next instruction, and now run a not-equals operation
-      l = GetNextInstructionLine(file_results.first, l);
-      // cout << "(combining with instruction " << file_results.first[l] << ")" << endl;
+      l = GetNextInstructionLine(lines, l);
+      // cout << "(combining with instruction " << lines[l] << ")" << endl;
       cmd_func = &NotEquals;
     }
     else {
@@ -364,8 +349,8 @@ int main() {
       return -1;
     }
 
-    map<ALUState, vector<unsigned int>> next_maxed_possible_states;
-    for (auto it = maxed_possible_states.begin(); it != maxed_possible_states.end(); ++it) {
+    map<ALUState, vector<unsigned int>> next_best_possible_states;
+    for (auto it = best_possible_states.begin(); it != best_possible_states.end(); ++it) {
       ALUState current_state = it->first;
       vector<unsigned int> current_input_list = it->second;
       // cout << "Handling current ALU state: " << current_state << endl;
@@ -402,15 +387,15 @@ int main() {
         // }
         // cout << endl;
 
-        if (next_maxed_possible_states.find(state) != next_maxed_possible_states.end()) {
+        if (next_best_possible_states.find(state) != next_best_possible_states.end()) {
           if (l >= 98) {
-            // cout << "Evaluating " << state << " already stored in map with input list " << ConvertDigitListToNumber(next_maxed_possible_states[state]) << " against new input list " << ConvertDigitListToNumber(next_input_list) << endl;
+            // cout << "Evaluating " << state << " already stored in map with input list " << ConvertDigitListToNumber(next_best_possible_states[state]) << " against new input list " << ConvertDigitListToNumber(next_input_list) << endl;
           }
 
-          // If this next state has already been reached by an already-processed ALU state, then store the input list that represents the greater number
-          if (ConvertDigitListToNumber(next_maxed_possible_states.at(state)) > ConvertDigitListToNumber(next_input_list)) {
+          // If this next state has already been reached by an already-processed ALU state, then store the input list that represents the preferred number, based on the comparison function
+          if ((*compare_func)(ConvertDigitListToNumber(next_best_possible_states.at(state)), ConvertDigitListToNumber(next_input_list))) {
             // cout << "Using the stored input list" << endl;
-            next_input_list = next_maxed_possible_states.at(state);
+            next_input_list = next_best_possible_states.at(state);
           }
         }
         else {
@@ -419,39 +404,57 @@ int main() {
           }
         }
 
-        next_maxed_possible_states[state] = next_input_list;
+        next_best_possible_states[state] = next_input_list;
       }
     }
 
     // Move to next possible states for next instruction
-    if (next_maxed_possible_states.size() != maxed_possible_states.size()) {
-      // cout << "Now handling " << next_maxed_possible_states.size() << " states" << endl;
+    if (next_best_possible_states.size() != best_possible_states.size()) {
+      // cout << "Now handling " << next_best_possible_states.size() << " states" << endl;
     }
 
-    maxed_possible_states = next_maxed_possible_states;
+    best_possible_states = next_best_possible_states;
   }
 
-  // Pen and paper suggested answer 99994469899267, but inevitably missed something, because it's too high
-  // TODO IDEAS: rather than compute everything, form strings for what the registers equal, and print out z at the end (can simplify certain instructions this way; mul x 0 means the whole expression gets wiped out and goes to 0); everything else gets prepended with (, appended with ), and then an operator written out, potentially also with () around it
-  // TODO idea go thru instructions in reverse order; z must be 0, so "add z y" means z and y are opposite but equal positive/negative numbers; but I don't know how to represent all possibilities for that...
-  // TODO idea: try all 1s, all 2s, all 3s, etc. as input and what that gives us; or 12345.... 98765....
-  // TODO idea: if deleting is slow, keep a list of things that need to be deleted, and delete them later! Or figure out another way to only use 1 map the whole time (could include instruction number in ALU state, OR remove element from map as we use it - might have to use a while loop/repeatedly call begin() to get all elements to be handled correctly) - **test how iterating works while you delete; if I can guarantee order, I could insert higher ALU instructions before the current iterator, or just write skip code if state is beyond current instruction
-
-  // Determine which valid output has the greatest model number
-  unsigned long long int max_model_number = 0;
-  for (auto state:maxed_possible_states) {
+  // Determine which valid output has the preferred model number, according to given comparison function
+  long long int best_model_number = 0;
+  for (auto state:best_possible_states) {
     if (state.first.GetVariableValue(z) == 0) {
-      unsigned long long int valid_model_number = ConvertDigitListToNumber(state.second);
-      if (valid_model_number > max_model_number) {
-        max_model_number = valid_model_number;
+      long long int valid_model_number = ConvertDigitListToNumber(state.second);
+      if (best_model_number == 0 || (*compare_func)(valid_model_number, best_model_number)) {
+        best_model_number = valid_model_number;
       }
     }
   }
 
-  cout << "Part 1 answer: " << max_model_number << endl;
+  return best_model_number;
+}
+
+int main() {
+  // The original input.txt was studied and modified to reduce instructions to speed up code; see explanatory comments in the file
+  pair<vector<string>, int> file_results = ReadLinesFromFile("day24/input-modified.txt");
+  if (file_results.second < 0) {
+    cout << "Failed to read file" << endl;
+    return -1;
+  }
+
+  // Pre-process instructions to more efficiently determine acceptable model numbers
+  long long int z_dividers_remaining = 0;
+  for (auto line:file_results.first) {
+    // Count the number of times the defining z-divider instruction appears
+    if (line == z_divider_instruction) {
+      ++z_dividers_remaining;
+    }
+  }
+
+  // Part 1:
+  // Pen-and-paper method led to answer 99994469899267, but I inevitably missed something, because it's too high
+  long long int max_valid_model_number = ComputeValidModelNumber(file_results.first, &AGreaterThanB, z_dividers_remaining); // took 16m15s on my machine
+  cout << "Part 1 answer: " << max_valid_model_number << endl;
 
   // Part 2:
-  // TODO
+  long long int min_valid_model_number = ComputeValidModelNumber(file_results.first, &ALessThanB, z_dividers_remaining);
+  cout << "Part 2 answer: " << min_valid_model_number << endl; // took 11m0s on my machine
 
   return 0;
 }
