@@ -15,10 +15,6 @@
 
 using namespace std;
 
-// TODO FINALLY remove unused code (consider: instruction commands I've rendered obselete)
-// TODO FINALLY remove debugging statements
-// TODO HERE evaluate which imports are needed
-
 // Define ALU operations
 typedef void (*instruction_cmd)(long long int& a, const long long int b);
 
@@ -63,6 +59,7 @@ ALUVariable FromInstructionChar(const char& c) {
   }
 }
 
+// dedicated Instruction class for parsing arguments/variables/literals/command from instruction line
 class Instruction {
   private:
     ALUVariable arg2;
@@ -112,10 +109,12 @@ class Instruction {
       return *this;
     }
 
+    // returns VARIABLE_COUNT if there is no 2nd argument variable (may still be 2nd argument literal)
     ALUVariable GetSecondArgumentVariable() const {
       return this->arg2;
     }
 
+    // returns 2nd value of pair as false if there is no 2nd argument literal in the command (may still be 2nd argument variable)
     pair<long long int,bool> GetSecondArgumentLiteral() const {
       return pair<long long int,bool>(this->arg2_literal, this->arg2_literal_defined);
     }
@@ -134,6 +133,7 @@ int GetNextInstructionLine(const vector<string>& lines, const int curr) {
 constexpr long long int possible_input_digits[9] = {1,2,3,4,5,6,7,8,9};
 const long long int max_digit = possible_input_digits[8];
 
+// dedicated class to track variable values of an ALU
 class ALUState {
   private:
     vector<long long int> variables;
@@ -211,7 +211,6 @@ class ALUState {
         all_possible_states.push_back(state);
       }
 
-      // cout << "returning " << all_possible_states.size() << " states from single-var instruction" << endl;
       return all_possible_states;
     }
 
@@ -280,9 +279,9 @@ typedef bool (*comparison)(const long long int& a, const long long int& b);
 bool AGreaterThanB(const long long int& a, const long long int& b) { return a > b; }
 bool ALessThanB(const long long int& a, const long long int& b) { return a < b; }
 
+// ComputeValidModelNumber uses the given comparison function to return the most preferred model number that is valid, given the lines of the MONAD program
 long long int ComputeValidModelNumber(const vector<string>& lines, comparison compare_func, long long int z_dividers_remaining) {
   long long int max_possibly_valid_z_value = ComputeMaximumMultipliedZValue(z_dividers_remaining);
-  // cout << "Max possible z value starts as " << max_possibly_valid_z_value << " with " << z_dividers_remaining << " divider instructions remaining" << endl;
   
   // Create initial possible ALU state
   ALUState initial = ALUState();
@@ -291,7 +290,6 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
   
   // Process each instruction on all possible ALU states, given input possibilities
   for (int l = GetNextInstructionLine(lines, -1); l < lines.size(); l = GetNextInstructionLine(lines, l)) {
-    // cout << "Performing instruction " << l << ": " << lines[l] << endl;
     Instruction i(lines[l]);
 
     // Parse file input: parse command from instruction
@@ -311,7 +309,6 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
         // studying input.txt reveals that when a variable is multiplied by 0, the next instruction is always adding a value to that variable, effectively setting that variable equal to what's specified in the second instruction
         // Combine those two instructions into a single command: input b into a
         l = GetNextInstructionLine(lines, l);
-        // cout << "(combining with instruction " << lines[l] << ")" << endl;
         cmd_func = &Input;
         Instruction equivalent(lines[l]);
         i = equivalent;
@@ -329,7 +326,6 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
       if (lines[l] == z_divider_instruction) {
         --z_dividers_remaining;
         max_possibly_valid_z_value = ComputeMaximumMultipliedZValue(z_dividers_remaining);
-        // cout << "Max possible z value is now " << max_possibly_valid_z_value << " with " << z_dividers_remaining << " divider instructions remaining" << endl;
       }
 
       cmd_func = &Divide;
@@ -341,7 +337,6 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
       // studying input.txt reveals that all eql instructions come in pairs that equate to a not-equal operation
       // so we'll skip the next instruction, and now run a not-equals operation
       l = GetNextInstructionLine(lines, l);
-      // cout << "(combining with instruction " << lines[l] << ")" << endl;
       cmd_func = &NotEquals;
     }
     else {
@@ -353,26 +348,21 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
     for (auto it = best_possible_states.begin(); it != best_possible_states.end(); ++it) {
       ALUState current_state = it->first;
       vector<unsigned int> current_input_list = it->second;
-      // cout << "Handling current ALU state: " << current_state << endl;
 
       vector<ALUState> next_states;
       if (i.GetSecondArgumentVariable() != VARIABLE_COUNT) {
-        // cout << "Processing double-var instruction type..." << endl;
         next_states = current_state.PerformInstruction(cmd_func, i.arg1, i.GetSecondArgumentVariable());
       }
       else if (i.GetSecondArgumentLiteral().second) {
-        // cout << "Processing one-var one-val instruction type..." << endl;
         next_states = current_state.PerformInstruction(cmd_func, i.arg1, i.GetSecondArgumentLiteral().first);
       }
       else {
-        // cout << "Processing single-var instruction type..." << endl;
         next_states = current_state.PerformInstruction(cmd_func, i.arg1);
       }
 
       for (auto state:next_states) {
         // Determine if this next state has a chance of representing a valid model number before adding it to the tracking map
         if (state.GetVariableValue(z) > max_possibly_valid_z_value) {
-          // cout << "Rejecting state with z value " << state.GetVariableValue(z) << " as it is too high for the remaining " << z_dividers_remaining << " dividing instructions to reduce" << endl;
           continue;
         }
 
@@ -381,26 +371,10 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
           next_input_list.push_back(state.GetVariableValue(i.arg1));
         }
 
-        // cout << "Next state is: " << state << " with input list:";
-        // for (auto input:next_input_list) {
-        //   cout << input << ",";
-        // }
-        // cout << endl;
-
         if (next_best_possible_states.find(state) != next_best_possible_states.end()) {
-          if (l >= 98) {
-            // cout << "Evaluating " << state << " already stored in map with input list " << ConvertDigitListToNumber(next_best_possible_states[state]) << " against new input list " << ConvertDigitListToNumber(next_input_list) << endl;
-          }
-
           // If this next state has already been reached by an already-processed ALU state, then store the input list that represents the preferred number, based on the comparison function
           if ((*compare_func)(ConvertDigitListToNumber(next_best_possible_states.at(state)), ConvertDigitListToNumber(next_input_list))) {
-            // cout << "Using the stored input list" << endl;
             next_input_list = next_best_possible_states.at(state);
-          }
-        }
-        else {
-          if (l >= 98) {
-            // cout << "Inserting " << state << " into the map for the first time with input list " << ConvertDigitListToNumber(next_input_list) << endl;
           }
         }
 
@@ -409,15 +383,11 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
     }
 
     // Move to next possible states for next instruction
-    if (next_best_possible_states.size() != best_possible_states.size()) {
-      // cout << "Now handling " << next_best_possible_states.size() << " states" << endl;
-    }
-
     best_possible_states = next_best_possible_states;
   }
 
   // Determine which valid output has the preferred model number, according to given comparison function
-  long long int best_model_number = 0;
+  long long int best_model_number = 0; // starting value is ok because 0 is not a valid model number (since no digit can be 0)
   for (auto state:best_possible_states) {
     if (state.first.GetVariableValue(z) == 0) {
       long long int valid_model_number = ConvertDigitListToNumber(state.second);
@@ -453,8 +423,8 @@ int main() {
   cout << "Part 1 answer: " << max_valid_model_number << endl;
 
   // Part 2:
-  long long int min_valid_model_number = ComputeValidModelNumber(file_results.first, &ALessThanB, z_dividers_remaining);
-  cout << "Part 2 answer: " << min_valid_model_number << endl; // took 11m0s on my machine
+  long long int min_valid_model_number = ComputeValidModelNumber(file_results.first, &ALessThanB, z_dividers_remaining); // took 11m0s on my machine
+  cout << "Part 2 answer: " << min_valid_model_number << endl;
 
   return 0;
 }
