@@ -2,7 +2,7 @@
 // Description: solver for Puzzles 1 and 2 of Day 25 of The Advent Of Code 2021
 // See: https://adventofcode.com/2021
 // Part 1: What is the first step on which no sea cucumbers move?
-// Part 2: TODO
+// Part 2: Christmas!
 
 #include "../util/fileutil.hpp" // ReadLinesFromFile
 #include <iostream>
@@ -13,9 +13,6 @@
 
 using namespace std;
 
-// TODO FINALLY remove all unused code (unused constructors? unused copy/clear?)
-// TODO FINALLY remove all debugging code (cout << )
-
 // lower number represents higher priority
 enum MovementType { east=0, south=1, MOVEMENT_TYPE_LIMIT };
 
@@ -24,9 +21,6 @@ class SeaCucumber {
   public:
     // Constructors
     SeaCucumber() {}
-    SeaCucumber(const SeaCucumber& other) {
-      cout << "in base sea cucumber copy constructor" << endl;
-    }
 
     // Functional methods
     virtual MovementType GetMovementType() const { return MOVEMENT_TYPE_LIMIT; }
@@ -41,9 +35,6 @@ class EastMovingSeaCucumber : public SeaCucumber {
   public:
     // Constructors
     EastMovingSeaCucumber() {}
-    EastMovingSeaCucumber(const EastMovingSeaCucumber& other): SeaCucumber(other) {
-      // cout << "in south-moving copy constructor" << endl;
-    }
 
     MovementType GetMovementType() const { return east; }
     const char GetChar() const { return '>'; }
@@ -55,9 +46,6 @@ class SouthMovingSeaCucumber : public SeaCucumber {
   public:
     // Constructors
     SouthMovingSeaCucumber() {}
-    SouthMovingSeaCucumber(const SouthMovingSeaCucumber& other): SeaCucumber(other) {
-      // cout << "in south-moving copy constructor" << endl;
-    }
 
     MovementType GetMovementType() const { return south; }
     const char GetChar() const { return 'v'; }
@@ -68,21 +56,6 @@ class SouthMovingSeaCucumber : public SeaCucumber {
 class SeaFloorState {
   private:
     vector<vector<SeaCucumber*>> state; // accessed like [row][col]
-
-    void copy(const SeaFloorState& other) { // TODO FINALLY may be unused
-      this->state.resize(other.state.size());
-      for (int row = 0; row < this->state.size(); ++row) {
-        this->state[row].resize(other.state[row].size());
-        for (int col = 0; col < this->state[row].size(); ++col) {
-          if (other.state[row][col] != NULL) {
-            this->state[row][col] = new SeaCucumber(*other.state[row][col]);
-          }
-          else {
-            this->state[row][col] = NULL;
-          }
-        }
-      }
-    }
 
     // returns result in form (row,col)
     pair<int,int> SpaceAhead(const int& row, const int& col, const MovementType& move_type) {
@@ -111,7 +84,7 @@ class SeaFloorState {
       return pair<int,int>(row_ahead,col_ahead);
     }
 
-    void clear_state() {
+    void clear() {
       for (auto row:this->state) {
         for (auto position:row) {
           delete position;
@@ -119,10 +92,6 @@ class SeaFloorState {
         row.resize(0);
       }
       this->state.resize(0);
-    }
-
-    void clear() {
-      this->clear_state();
     }
 
   public:
@@ -172,15 +141,13 @@ class SeaFloorState {
       // each cucumber will make sure that there's nothing in front of it before and during the step before it moves
       // (this is to account for south-movers after east-movers have transitioned)
       for (int pri = 0; pri < MOVEMENT_TYPE_LIMIT; ++pri) {
-        // cout << "Moving sea cucumbers with priority " << pri << endl;
-
         // determine where each sea cucumber will be in the next state
         for (int row = 0; row < this->state.size(); ++row) {
           for (int col = 0; col < this->state[row].size(); ++col) {
             SeaCucumber* c = this->state[row][col];
+
             if (c != NULL && c->GetMovementType() == pri) {
               pair<int,int> space_ahead = SpaceAhead(row, col, c->GetMovementType());
-              // cout << "got next space for cucumber at " << row << "," << col << ": " << space_ahead.first << "," << space_ahead.second << endl;
 
               // move only occurs if space ahead is empty (consider both cucumbers that have already moved, and cucumbers that have yet to move)
               // because cucumbers can only move down and to the right (the same directions in which we're iterating row/col), this is a valid check
@@ -210,10 +177,9 @@ class SeaFloorState {
           }
         }
       }
-      // TODO REMEMBER TO TEST LITTLE BY LITTLE because it will be very hard to discern bugs over the 100+ by 100+ grid
 
       // update internal state of this floor object
-      // this->clear_state(); // what was previously in state is totally preserved in the next state, so no memory clearing needs to happen here
+      // what was previously in state is totally preserved in the next state, so no memory clearing needs to happen here
       this->state = next_state;
 
       return cucumbers_moved;
@@ -280,19 +246,12 @@ int main() {
   do {
     ++step;
     cucumbers_moved = current_state->PerformStep();
-    // cout << cucumbers_moved << " moved during step " << step << endl;
-
-    // cout << "At the end of step " << step << ":" << endl;
-    // cout << *current_state << endl;
   } while (cucumbers_moved != 0);
 
   cout << "Part 1 answer: " << step << endl;
 
   // Clean up memory
   delete current_state;
-
-  // Part 2:
-  // TODO what do I think part 2 will be? what the largest space w/o sea cucumbers is? which might happen while they're still moving; so floor state could be breadth-first searched for empty spaces (like I did for the basins problem)
 
   return 0;
 }
