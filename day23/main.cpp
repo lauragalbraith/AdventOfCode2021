@@ -583,7 +583,7 @@ int main() {
   }
 
   BurrowState start(file_results.first);
-  cout << "Part 1 answer: " << LeastEnergyToOrganize(start) << endl << endl;
+  cout << "Part 1 answer: " << LeastEnergyToOrganize(start) << endl << endl; // took 30s on my machine
 
   // Part 2:
   pair<vector<string>, int> file_results2 = ReadLinesFromFile("day23/input_part2.txt");
@@ -593,7 +593,7 @@ int main() {
   }
 
   BurrowState start2(file_results2.first);
-  cout << "Part 2 answer: " << LeastEnergyToOrganize(start2) << endl;
+  cout << "Part 2 answer: " << LeastEnergyToOrganize(start2) << endl; // tok 4m on my machine
 
   return 0;
 }

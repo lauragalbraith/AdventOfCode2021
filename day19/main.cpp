@@ -520,7 +520,7 @@ int main() {
     delete to_match;
   }
 
-  cout << "Part 1 answer: " << full_space->BeaconCount() << endl;
+  cout << "Part 1 answer: " << full_space->BeaconCount() << endl; // took most of 2m32s to run on my machine
 
   // Part 2:
   vector<Coordinate> final_scanners = full_space->GetScanners();
