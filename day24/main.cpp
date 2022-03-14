@@ -45,17 +45,17 @@ void Modulo(long long int& a, const long long int b) { a = a % b; }
 void NotEquals(long long int& a, const long long int b) { a = a != b ? 1 : 0; }
 
 // Define types/enums to make it easier to determine which variable(s) are being manipulated
-enum ALUVariable { w=0, x=1, y=2, z=3, VARIABLE_COUNT=4 };
+enum class ALUVariable : int { w=0, x=1, y=2, z=3, VARIABLE_COUNT=4 };
 
 // returns VARIABLE_COUNT if char does not match a variable
 ALUVariable FromInstructionChar(const char& c) {
   switch(c) {
-    case 'w': return w;
-    case 'x': return x;
-    case 'y': return y;
-    case 'z': return z;
+    case 'w': return ALUVariable::w;
+    case 'x': return ALUVariable::x;
+    case 'y': return ALUVariable::y;
+    case 'z': return ALUVariable::z;
 
-    default: return VARIABLE_COUNT;
+    default: return ALUVariable::VARIABLE_COUNT;
   }
 }
 
@@ -84,12 +84,12 @@ class Instruction {
       this->arg1 = FromInstructionChar(m.str(2)[0]);
 
       // parse second argument to the instruction
-      this->arg2 = VARIABLE_COUNT;
+      this->arg2 = ALUVariable::VARIABLE_COUNT;
       this->arg2_literal_defined = false;
 
       if (m[4] != "") {
         this->arg2 = FromInstructionChar(m.str(4)[0]);
-        if (this->arg2 == VARIABLE_COUNT) {
+        if (this->arg2 == ALUVariable::VARIABLE_COUNT) {
           this->arg2_literal_defined = true;
           this->arg2_literal = stoi(m[4]);
         }
@@ -148,7 +148,7 @@ class ALUState {
   public:
     // ALU state starts with all variables at value 0
     ALUState() {
-      for (int i = 0; i < VARIABLE_COUNT; ++i) {
+      for (int i = 0; i < static_cast<int>(ALUVariable::VARIABLE_COUNT); ++i) {
         this->variables.push_back(0);
       }
     }
@@ -188,14 +188,14 @@ class ALUState {
 
     // Returns the value of this ALU state's specified variable
     const long long int GetVariableValue(const ALUVariable var) const {
-      if (var >= VARIABLE_COUNT) {
+      if (var >= ALUVariable::VARIABLE_COUNT) {
         throw range_error("ALU variable index");
       }
-      else if (var >= this->variables.size()) {
+      else if (static_cast<int>(var) >= this->variables.size()) {
         throw logic_error("ALU state has unexpected number of variables");
       }
 
-      return this->variables[var];
+      return this->variables[static_cast<int>(var)];
     }
 
     // Perform instruction on a single variable
@@ -206,7 +206,7 @@ class ALUState {
       for (int i = 0; i < sizeof(possible_input_digits)/sizeof(possible_input_digits[0]); ++i) {
         ALUState state(*this);
 
-        (*instrct)(state.variables[a_var], possible_input_digits[i]);
+        (*instrct)(state.variables[static_cast<int>(a_var)], possible_input_digits[i]);
 
         all_possible_states.push_back(state);
       }
@@ -216,14 +216,14 @@ class ALUState {
 
     // Perform instruction on two variables
     vector<ALUState> PerformInstruction(instruction_cmd instrct, const ALUVariable a_var, const ALUVariable b_var) {
-      (*instrct)(this->variables[a_var], this->variables[b_var]);
+      (*instrct)(this->variables[static_cast<int>(a_var)], this->variables[static_cast<int>(b_var)]);
 
       return vector<ALUState>(1, *this);
     }
 
     // Perform instruction on one variables and a literal
     vector<ALUState> PerformInstruction(instruction_cmd instrct, const ALUVariable a_var, const long long int b_literal) {
-      (*instrct)(this->variables[a_var], b_literal);
+      (*instrct)(this->variables[static_cast<int>(a_var)], b_literal);
 
       return vector<ALUState>(1, *this);
     }
@@ -233,9 +233,9 @@ class ALUState {
 
 // defining the << operator function to ease printing
 ostream& operator<<(ostream& os, const ALUState& c) {
-  for (int i = 0; i < VARIABLE_COUNT; ++i) {
+  for (int i = 0; i < static_cast<int>(ALUVariable::VARIABLE_COUNT); ++i) {
     os << c.GetVariableValue(static_cast<ALUVariable>(i)); // TODO also print the name of the variable
-    if (i < VARIABLE_COUNT - 1) {
+    if (i < static_cast<int>(ALUVariable::VARIABLE_COUNT) - 1) {
       os << ",";
     }
   }
@@ -350,7 +350,7 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
       vector<unsigned int> current_input_list = it->second;
 
       vector<ALUState> next_states;
-      if (i.GetSecondArgumentVariable() != VARIABLE_COUNT) {
+      if (i.GetSecondArgumentVariable() != ALUVariable::VARIABLE_COUNT) {
         next_states = current_state.PerformInstruction(cmd_func, i.arg1, i.GetSecondArgumentVariable());
       }
       else if (i.GetSecondArgumentLiteral().second) {
@@ -362,7 +362,7 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
 
       for (auto state:next_states) {
         // Determine if this next state has a chance of representing a valid model number before adding it to the tracking map
-        if (state.GetVariableValue(z) > max_possibly_valid_z_value) {
+        if (state.GetVariableValue(ALUVariable::z) > max_possibly_valid_z_value) {
           continue;
         }
 
@@ -389,7 +389,7 @@ long long int ComputeValidModelNumber(const vector<string>& lines, comparison co
   // Determine which valid output has the preferred model number, according to given comparison function
   long long int best_model_number = 0; // starting value is ok because 0 is not a valid model number (since no digit can be 0)
   for (auto state:best_possible_states) {
-    if (state.first.GetVariableValue(z) == 0) {
+    if (state.first.GetVariableValue(ALUVariable::z) == 0) {
       long long int valid_model_number = ConvertDigitListToNumber(state.second);
       if (best_model_number == 0 || (*compare_func)(valid_model_number, best_model_number)) {
         best_model_number = valid_model_number;
